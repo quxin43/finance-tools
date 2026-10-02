@@ -700,6 +700,8 @@ render();
 "use strict";
 const $ = id => document.getElementById(id);
 const LK = "finmon-gap-v3";
+const DASHES = [[], [7,4], [2,3], [10,3,2,3]];                    // solid, dashed, dotted, dash-dot
+const SHAPES = ["circle","triangle","rect","rectRot","crossRot","star","rectRounded"];
 const PALETTE = ["#2F6B4F","#B8892B","#3E6C8F","#8E5B8C","#B9653A","#6E9A78","#A44A4A","#5B6FB5","#C2A13A","#2E8C8C","#9C6B3E","#7A4FA0","#5F7F2E"];
 let D = null, chart = null, allChart = null, dates = [], ts = [], keys = [];
 let auto = true, showAll = true;
@@ -779,15 +781,22 @@ function render(){
 
 function renderAll(acc, ranked, missing, s0){
   $("gAllTitle").textContent = `All indices: accumulated gain/loss since ${fmtD(dates[s0])}`;
-  $("gAllNote").textContent = "Click a name in the legend to hide or show that index. Legend is ordered best to worst." + (missing.length?` Not included (no data on the start date): ${missing.join(", ")}.`:"");
+  $("gAllNote").textContent = "Each index has its own colour, line style and marker. Hover a name in the legend to highlight it, click to hide or show it. Legend is ordered best to worst." + (missing.length?` Not included (no data on the start date): ${missing.join(", ")}.`:"");
   if(!showAll){ if(allChart){ allChart.destroy(); allChart=null; } return; }
   const muted=cssVar("--muted"), line=cssVar("--line"), ink=cssVar("--ink");
   const hidden = allChart ? Object.fromEntries(allChart.data.datasets.map((d,i)=>[d.key, !allChart.isDatasetVisible(i)])) : {};
-  const ds = ranked.map(([k,v])=>{ const ci=keys.indexOf(k)%PALETTE.length; return {
+  const ds = ranked.map(([k,v])=>{ const ci=keys.indexOf(k), col=PALETTE[ci%PALETTE.length]; return {
     key:k, label:`${k} ${pct(v,1)}`, data:acc[k].map((y,j)=>({x:ts[s0+j],y})), parsing:false,
-    borderColor:PALETTE[ci], backgroundColor:PALETTE[ci], borderWidth:1.6, pointRadius:0, tension:0, fill:false, hidden:!!hidden[k] }; });
+    borderColor:col, backgroundColor:col, borderWidth:1.6, borderDash:DASHES[ci%DASHES.length], tension:0, fill:false, hidden:!!hidden[k],
+    // a marker every ~1/12 of the line, staggered per index so markers don't stack on the same date
+    pointStyle:SHAPES[ci%SHAPES.length], pointHoverRadius:5, pointBorderWidth:1.2, pointBackgroundColor:"transparent",
+    pointRadius:c=>{ const n=c.dataset.data.length, step=Math.max(1,Math.ceil(n/12)); return (c.dataIndex+ci*Math.ceil(step/13))%step===0?4:0; } }; });
   const opts = baseOpts(s0, muted, line, ink);
-  opts.plugins.legend = { display:true, position:"right", labels:{ color:muted, boxWidth:12, font:{size:11} } };
+  opts.plugins.legend = { display:true, position:"right",
+    labels:{ color:muted, usePointStyle:true, boxHeight:8, font:{size:11} },
+    // hovering a legend name fades the other lines
+    onHover:(e,item,leg)=>{ const ch=leg.chart; ch.data.datasets.forEach((d,i)=>{ const base=PALETTE[keys.indexOf(d.key)%PALETTE.length]; const on=i===item.datasetIndex; d.borderColor=on?base:base+"33"; d.borderWidth=on?2.8:1.2; }); ch.update("none"); },
+    onLeave:(e,item,leg)=>{ const ch=leg.chart; ch.data.datasets.forEach(d=>{ d.borderColor=PALETTE[keys.indexOf(d.key)%PALETTE.length]; d.borderWidth=1.6; }); ch.update("none"); } };
   opts.interaction = { mode:"nearest", axis:"x", intersect:false };
   opts.plugins.tooltip = { itemSort:(a,b)=>b.parsed.y-a.parsed.y, callbacks:{ title:it=>tipDate(it), label:it=>`${it.dataset.key}: ${pct(it.parsed.y)}` } };
   if(window.innerWidth<700) opts.plugins.legend.position="bottom";

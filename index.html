@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finance Monitor &amp; Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#EDF1EC; --sheet:#FBFCFA; --ink:#14251D; --muted:#5A6B62; --line:#CBD6CE;
+  --green:#2F6B4F; --green-soft:#DCE8E0; --red:#A8382A; --red-soft:#F3DEDA; --gold:#B8892B;
+  --focus:#3E6C8F;
+  --c0:#2F6B4F; --c1:#B8892B; --c2:#3E6C8F; --c3:#8E5B8C; --c4:#B9653A; --c5:#6E9A78; --c6:#A44A4A; --c7:#7A7F86;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1814; --sheet:#16221C; --ink:#E4ECE6; --muted:#97A89E; --line:#2C3D34;
+    --green:#6FBF94; --green-soft:#1E3529; --red:#E38672; --red-soft:#3A2420; --gold:#D9AE55; --focus:#8BB6D9;
+    --c0:#6FBF94; --c1:#D9AE55; --c2:#7FA9CC; --c3:#C08FBE; --c4:#E0946A; --c5:#9CC7A6; --c6:#D88080; --c7:#A5AAB0;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1814; --sheet:#16221C; --ink:#E4ECE6; --muted:#97A89E; --line:#2C3D34;
+  --green:#6FBF94; --green-soft:#1E3529; --red:#E38672; --red-soft:#3A2420; --gold:#D9AE55; --focus:#8BB6D9;
+  --c0:#6FBF94; --c1:#D9AE55; --c2:#7FA9CC; --c3:#C08FBE; --c4:#E0946A; --c5:#9CC7A6; --c6:#D88080; --c7:#A5AAB0;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Familjen Grotesk","Public Sans",system-ui,sans-serif;margin:0;line-height:1.15}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 18px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;justify-content:space-between;margin-bottom:18px}
+header.top h1{font-size:1.45rem;font-weight:700;letter-spacing:-.01em}
+.tabs{display:flex;gap:4px;background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:0;background:transparent;color:var(--muted);font:600 .9rem "Public Sans",sans-serif;padding:7px 16px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--sheet)}
+.right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select,input{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--green);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600}
+:root[data-theme="dark"] .btn{color:#0F1814}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn{color:#0F1814}}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 12px;font-weight:500}
+.status{font-size:.8rem;color:var(--muted)}
+
+/* Month ledger hero */
+.ledger{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:20px 20px 16px;margin-bottom:18px}
+.month-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.month-nav h2{font-size:1.9rem;font-weight:600;letter-spacing:-.02em;min-width:9ch}
+.month-nav button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:1.1rem;line-height:1}
+.strip{position:relative;height:46px;border-radius:6px;overflow:hidden;display:flex;background:var(--paper);border:1px solid var(--line)}
+.strip .seg{height:100%;transition:flex-basis .35s ease}
+.strip .left{background:repeating-linear-gradient(135deg,var(--green-soft) 0 6px,transparent 6px 12px)}
+.strip .over{background:repeating-linear-gradient(135deg,var(--red-soft) 0 6px,var(--red) 6px 8px)}
+.strip-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.9rem}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.totals div{font-size:.85rem;color:var(--muted)}
+.totals b{display:block;font:600 1.35rem "Familjen Grotesk",sans-serif;color:var(--ink);margin-top:2px}
+.totals b.pos{color:var(--green)} .totals b.neg{color:var(--red)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:18px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:18px}
+.panel+.panel{margin-top:18px}
+.panel h3{font-size:1.1rem;font-weight:600;margin-bottom:12px}
+.panel p.hint{margin:-6px 0 12px;color:var(--muted);font-size:.85rem}
+
+.typesw{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.typesw button{border:0;background:transparent;color:var(--muted);padding:8px;font-weight:600}
+.typesw button[aria-pressed="true"][data-t="expense"]{background:var(--red-soft);color:var(--red)}
+.typesw button[aria-pressed="true"][data-t="income"]{background:var(--green-soft);color:var(--green)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+.form .full{grid-column:1/-1}
+.err{color:var(--red);font-size:.85rem;min-height:1.2em;margin:6px 0 0}
+
+.budget{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.budget:last-child{border-bottom:0}
+.budget .nm{display:flex;align-items:center;gap:8px;font-weight:500}
+.budget .nm i{width:9px;height:9px;border-radius:50%}
+.budget input{width:96px;padding:5px 8px;text-align:right;font-size:.9rem}
+.bar{grid-column:1/-1;height:7px;background:var(--paper);border-radius:4px;overflow:hidden}
+.bar span{display:block;height:100%;border-radius:4px}
+.budget small{grid-column:1/-1;color:var(--muted);font-size:.78rem}
+.budget small.neg{color:var(--red)}
+
+.txhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.txhead h3{margin:0}
+.tx{list-style:none;margin:0;padding:0}
+.tx li{display:grid;grid-template-columns:48px minmax(0,1fr) auto 30px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.tx .d{font-size:.78rem;color:var(--muted);line-height:1.2}
+.tx .d b{display:block;font:600 1.05rem "Familjen Grotesk",sans-serif;color:var(--ink)}
+.tx .what{min-width:0}
+.tx .what div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .what small{color:var(--muted);display:flex;align-items:center;gap:6px}
+.tx .what small i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.tx .amt{font-weight:600}
+.tx .amt.in{color:var(--green)}
+.tx .del{border:0;background:transparent;color:var(--muted);font-size:1.1rem;border-radius:6px;height:30px}
+.tx .del:hover{color:var(--red);background:var(--red-soft)}
+.empty{color:var(--muted);padding:18px 0;text-align:center}
+.trend-wrap{overflow-x:auto}
+.trend-wrap svg{display:block;width:100%;min-width:420px;height:auto}
+
+/* Calculators */
+.calcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.calc .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.calc label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+.out{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.out .main{font:600 1.6rem "Familjen Grotesk",sans-serif}
+.out .sub{color:var(--muted);font-size:.88rem}
+.out dl{display:grid;grid-template-columns:auto auto;justify-content:space-between;gap:4px 12px;margin:10px 0 0;font-size:.9rem}
+.out dt{color:var(--muted)} .out dd{margin:0;text-align:right;font-weight:500}
+.split{display:flex;height:12px;border-radius:6px;overflow:hidden;margin-top:10px}
+.calc svg{width:100%;height:auto;display:block;margin-top:10px}
+/* Ladder */
+.lad-title{font-size:1.9rem;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+.lad-intro{margin:0 0 16px;color:var(--muted)}
+.lad-intro em{font-style:normal;font-weight:600;color:var(--ink)}
+.lad-inputs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px 12px}
+.lad-inputs label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+.lad-inputs+.lad-inputs{margin-top:10px}
+.lad-inputs label.chk{flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;font-size:.88rem;color:var(--ink)}
+.lad-inputs label.chk input{width:18px;height:18px;accent-color:var(--green)}
+.lad-totals{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:860px){.lad-totals{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.lad-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.chart-box{position:relative;height:340px}
+@media (max-width:520px){.chart-box{height:260px}}
+.slide{display:flex;align-items:center;gap:10px;font-size:.88rem;color:var(--muted);flex-wrap:wrap}
+.slide b{color:var(--ink);min-width:5ch}
+.slide input{width:200px;accent-color:var(--green)}
+.table-wrap{overflow-x:auto}
+.lad-table{width:100%;border-collapse:collapse;font-size:.8rem;white-space:nowrap}
+.lad-table th{text-align:right;vertical-align:bottom;font-weight:600;color:var(--muted);padding:6px 5px;border-bottom:1px solid var(--line);white-space:normal;line-height:1.25}
+.lad-table th:first-child{min-width:0}
+.unit-note{font:400 .78rem "Public Sans",sans-serif;color:var(--muted);margin-left:6px}
+.lad-table td small.blk{display:block}
+.lad-table td small{font-size:.72rem;color:var(--muted)}
+.lad-table .tag{padding:0 6px;font-size:.72rem}
+.lad-table td{text-align:right;padding:6px 5px;border-bottom:1px solid var(--line)}
+.lad-table th:first-child,.lad-table td:first-child{text-align:left}
+.lad-table tfoot td{font-weight:600;border-bottom:0}
+.lad-table .pos{color:var(--green)} .lad-table .neg{color:inherit} .lad-table td:last-child.neg,.lad-table tfoot td:last-child.neg{color:var(--red)}
+.lad-table .tag.dead{background:var(--paper);color:var(--muted);border:1px solid var(--line)}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.78rem;font-weight:600}
+.tag.ok{background:var(--green-soft);color:var(--green)} .tag.dead{background:var(--red-soft);color:var(--red)}
+.lad-note{margin:12px 0 0}
+.totals b.small{font-size:1rem}
+.lad-totals div{display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.lad-totals b,.lad-totals b.small{font-size:1rem;white-space:nowrap;margin-top:0;overflow:hidden;text-overflow:ellipsis}
+.lad-totals .plp{font-weight:500}
+[hidden]{display:none!important}
+@media (max-width:520px){
+  .totals b{font-size:1.1rem}
+  .month-nav h2{font-size:1.5rem}
+  .form,.calc .fields{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Finance Monitor &amp; Calculator</h1>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-view="ladder">Dip ladder</button>
+      <button role="tab" aria-selected="false" data-view="short">Rally ladder</button>
+      <button role="tab" aria-selected="false" data-view="gap">Index gap</button>
+    </div>
+    <div class="right">
+      <select id="currency" aria-label="Currency"></select>
+    </div>
+  </header>
+
+  <!-- DIP LADDER -->
+  <main id="ladder">
+    <section class="ledger">
+      <h2 class="lad-title">Dip-buying ladder</h2>
+      <p class="lad-intro">Starting when the price reaches <em>s</em>% of its peak, and every further <em>d</em>% after that, you add a tranche: I, then I×m, then I×m², and so on. Each tranche uses leverage L. The price bottoms at d<sub>min</sub> below the peak and then rebounds. The chart shows your total gain or loss at each rebound level.</p>
+      <div class="lad-inputs lad-first">
+        <label><span>Peak price</span><input type="number" id="lP0" value="100" min="0.0001" step="any"></label>
+        <label><span>Leverage L</span><input type="number" id="lL" value="2" min="1" step="0.5"></label>
+      </div>
+      <div class="lad-inputs">
+        <label><span>First buy at s (% of peak)</span><input type="number" id="lSp" value="" min="0" max="100" step="0.5"></label>
+        <label><span>Dip step d (%)</span><input type="number" id="lD" value="5" min="0.1" step="0.5"></label>
+        <label><span>First investment I</span><input type="number" id="lI" value="1000" min="0" step="100"></label>
+        <label><span>Magnitude m</span><input type="number" id="lM" value="1.5" min="0" step="0.1"></label>
+      </div>
+      <div class="lad-inputs lad-first">
+        <label><span>Bottom d<sub>min</sub> (% below peak)</span><input type="number" id="lMin" value="30" min="0" max="99" step="1"></label>
+        <label><span>Measure rebound</span><select id="lMode"><option value="bottom">% up from the bottom</option><option value="peak">Price vs. peak (%)</option></select></label>
+        <label id="lRangeLbl"><span>Chart up to (%)</span><input type="number" id="lRange" value="60" min="1" step="5"></label>
+        <label class="chk"><input type="checkbox" id="lLiq" checked> Liquidate a tranche when its loss reaches its margin</label>
+      </div>
+      <p class="err" id="lErr" role="alert"></p>
+      <div class="totals lad-totals">
+        <div>Capital committed<b id="lCap"></b></div>
+        <div>Tranches bought<b id="lN"></b></div>
+        <div>Loss at the bottom<b id="lTrough"></b></div>
+        <div><span>Margin + loss<br>at the bottom</span><b id="lML"></b></div>
+        <div><span id="lBEl">Breakeven</span><b id="lBE"></b></div>
+        <div><span id="lPLp">P&amp;L at rebound</span><b id="lPL"></b></div>
+      </div>
+    </section>
+
+
+    <section class="panel">
+      <div class="txhead">
+        <h3>Tranches <span class="unit-note">amounts in <span class="curcode">SGD</span></span></h3>
+        <label class="slide">Rebound d<sub>max</sub>: <b id="lSelV"></b><input type="range" id="lSel" min="0" max="60" step="0.5" value="20"></label>
+      </div>
+      <div class="table-wrap"><table class="lad-table">
+        <thead><tr><th>#</th><th>Buy at<br>(% of peak)</th><th>Price</th><th>Invested</th><th>Units</th><th>Total units held</th><th>Average price</th><th title="Value of all margin held, at this tranche&#39;s buy price">Total margin</th><th title="What this tranche&#39;s margin is worth when the price hits the bottom">Margin at bottom</th><th title="Gain or loss of every tranche bought so far, at this row&#39;s price (liquidated tranches count their full margin as lost)">Total loss</th><th title="Total margin plus the size of the total loss, at this row&#39;s price">Total margin + loss</th><th>Liq. at<br>(% of peak)</th><th>At bottom</th><th>P&amp;L at d<sub>max</sub></th></tr></thead>
+        <tbody id="lBody"></tbody>
+        <tfoot><tr><td colspan="3" title="Totals; held columns are what remains at the bottom">Total</td><td id="lFI"></td><td id="lFU"></td><td id="lFH"></td><td id="lFA"></td><td id="lFT"></td><td id="lFP"></td><td id="lFL"></td><td id="lFS"></td><td></td><td></td><td id="lFR"></td></tr></tfoot>
+      </table></div>
+      <p class="hint lad-note">Assumes the price falls straight to the bottom and then rises, each tranche is margined on its own (total units, total margin and average price count only tranches not yet liquidated at that point; margin is the invested amount valued at the current price, invested × price ÷ buy price, so it shrinks in step with the price; P&amp;L still includes the leveraged part of the position), and there are no fees, funding costs or interest. With liquidation off, a leveraged tranche can lose more than you put in.</p>
+    </section>
+
+    <section class="panel">
+      <h3>Gain / loss by rebound from bottom</h3>
+      <div class="chart-box"><canvas id="lChart" aria-label="Gain or loss by rebound level" role="img"></canvas></div>
+    </section>
+  </main>
+
+  <!-- RALLY LADDER (SHORT) -->
+  <main id="short" hidden>
+    <section class="ledger">
+      <h2 class="lad-title">Rally ladder (short selling)</h2>
+      <p class="lad-intro">The mirror of the dip ladder. Starting when the price reaches <em>s</em>% of its bottom, and every further <em>d</em>% after that, you sell short a tranche: I, then I×m, then I×m², and so on. Each tranche uses leverage L. The price tops out at d<sub>max</sub> above the bottom and then falls. The chart shows your total gain or loss at each drop level.</p>
+      <div class="lad-inputs lad-first">
+        <label><span>Bottom price</span><input type="number" id="sP0" value="100" min="0.0001" step="any"></label>
+        <label><span>Leverage L</span><input type="number" id="sL" value="2" min="1" step="0.5"></label>
+      </div>
+      <div class="lad-inputs">
+        <label><span>First sell at s (% of bottom)</span><input type="number" id="sSp" value="" min="100" step="0.5"></label>
+        <label><span>Rise step d (%)</span><input type="number" id="sD" value="5" min="0.1" step="0.5"></label>
+        <label><span>First investment I</span><input type="number" id="sI" value="1000" min="0" step="100"></label>
+        <label><span>Magnitude m</span><input type="number" id="sM" value="1.5" min="0" step="0.1"></label>
+      </div>
+      <div class="lad-inputs lad-first">
+        <label><span>Top d<sub>max</sub> (% above bottom)</span><input type="number" id="sMax" value="30" min="0" step="1"></label>
+        <label><span>Measure drop</span><select id="sMode"><option value="top">% down from the top</option><option value="start">Price vs. bottom (%)</option></select></label>
+        <label><span>Chart down to (%)</span><input type="number" id="sRange" value="50" min="1" step="5"></label>
+        <label class="chk"><input type="checkbox" id="sLiq" checked> Liquidate a tranche when its loss reaches its margin</label>
+      </div>
+      <p class="err" id="sErr" role="alert"></p>
+      <div class="totals lad-totals">
+        <div>Capital committed<b id="sCap"></b></div>
+        <div>Tranches sold<b id="sN"></b></div>
+        <div>Loss at the top<b id="sTop"></b></div>
+        <div><span>Margin + loss<br>at the top</span><b id="sML"></b></div>
+        <div><span id="sBEl">Breakeven</span><b id="sBE"></b></div>
+        <div><span id="sPLp">P&amp;L at drop</span><b id="sPL"></b></div>
+      </div>
+    </section>
+
+
+    <section class="panel">
+      <div class="txhead">
+        <h3>Tranches <span class="unit-note">amounts in <span class="curcode">SGD</span></span></h3>
+        <label class="slide">Drop: <b id="sSelV"></b><input type="range" id="sSel" min="0" max="1000" step="1" value="1000"></label>
+      </div>
+      <div class="table-wrap"><table class="lad-table">
+        <thead><tr><th>#</th><th>Sell at<br>(% of bottom)</th><th>Price</th><th>Invested</th><th>Units</th><th>Total units<br>short</th><th>Average sell price</th><th title="Value of all margin held, at this tranche&#39;s sell price">Total margin</th><th title="Invested amount valued at the top price: invested × top ÷ sell price">Margin at top</th><th title="Gain or loss of every tranche sold so far, at this row&#39;s price (liquidated tranches count their full margin as lost)">Total loss</th><th title="Total margin plus the size of the total loss, at this row&#39;s price">Total margin + loss</th><th>Liq. at<br>(% of bottom)</th><th>At top</th><th>P&amp;L at drop</th></tr></thead>
+        <tbody id="sBody"></tbody>
+        <tfoot><tr><td colspan="3" title="Totals; held columns are what remains at the top">Total</td><td id="sFI"></td><td id="sFU"></td><td id="sFH"></td><td id="sFA"></td><td id="sFT"></td><td id="sFP"></td><td id="sFL"></td><td id="sFS"></td><td></td><td></td><td id="sFR"></td></tr></tfoot>
+      </table></div>
+      <p class="hint lad-note">Assumes the price rises straight to the top and then falls, each tranche is margined on its own (total units, total margin and average sell price count only tranches not yet liquidated at that point), and there are no fees, borrowing costs or interest. Margin is the invested amount valued at the current price, invested × price ÷ sell price, so it grows as the price rises; P&amp;L still includes the leveraged short position. With liquidation off, a short can lose more than you put in.</p>
+    </section>
+
+    <section class="panel">
+      <h3>Gain / loss by drop from the top</h3>
+      <div class="chart-box"><canvas id="sChart" aria-label="Gain or loss by drop level" role="img"></canvas></div>
+    </section>
+  </main>
+
+  <!-- INDEX GAP -->
+  <main id="gap" hidden>
+    <section class="ledger">
+      <h2 class="lad-title">Index gap analysis</h2>
+      <p class="lad-intro">Pick two indices and a start date. Each day's gain or loss is close ÷ previous close − 1. The accumulated gain/loss is the <em>sum</em> of those daily percentages from the start date to the last date (not last close ÷ start close). The chart shows accumulated A − accumulated B for each date.</p>
+      <div class="lad-inputs lad-first">
+        <label><span>Index A</span><select id="gA"></select></label>
+        <label><span>Index B</span><select id="gB"></select></label>
+        <label><span>Start date</span><input type="date" id="gStart"></label>
+        <label><span>Quick range</span><select id="gQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="20y">20 years</option><option value="all">All data</option></select></label>
+      </div>
+      <div class="lad-inputs">
+        <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B</label>
+      </div>
+      <p class="err" id="gErr" role="alert"></p>
+      <div class="totals lad-totals">
+        <div><span id="gLA">Accumulated A</span><b id="gVA">—</b></div>
+        <div><span id="gLB">Accumulated B</span><b id="gVB">—</b></div>
+        <div><span>Gap A − B<br>(last date)</span><b id="gVG">—</b></div>
+        <div><span>Highest gap</span><b id="gVMax">—</b></div>
+        <div><span>Lowest gap</span><b id="gVMin">—</b></div>
+        <div><span>Days in range</span><b id="gVN">—</b></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 id="gTitle">Accumulated gain/loss gap by date</h3>
+      <div class="chart-box"><canvas id="gChart" role="img" aria-label="Accumulated gain/loss gap between the two indices by date"></canvas></div>
+      <p class="hint lad-note" id="gSrc">Loading data…</p>
+    </section>
+  </main>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const CUR = ["SGD","USD","EUR","GBP","AUD","MYR","INR","JPY","CNY","HKD","CAD"];
+CUR.forEach(c=>{ const o=document.createElement("option"); o.value=c; o.textContent=c; $("currency").appendChild(o); });
+try{ const c=localStorage.getItem("finmon-currency"); if(CUR.includes(c)) $("currency").value=c; }catch(e){}
+$("currency").addEventListener("change",()=>{ try{ localStorage.setItem("finmon-currency",$("currency").value); }catch(e){} });
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
+  ["ladder","short","gap"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
+}));
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const LK = "finmon-ladder-v1";
+const tf = v => Math.round(v).toLocaleString();                       // table amounts, no currency
+const ts = v => (v>0.5?"+":v<-0.5?"−":"") + tf(Math.abs(v));
+let pinMax = true;
+let lAuto = true; // s follows 100 − d until the user types their own value // slider starts at full scale and stays there until moved
+const ids = ["lSp","lD","lI","lM","lL","lMin","lP0","lMode","lRange","lLiq"];
+let chart = null;
+
+function fmt(n, dp){
+  const cur = $("currency").value || "SGD";
+  try{ return new Intl.NumberFormat(undefined,{style:"currency",currency:cur,maximumFractionDigits:dp??0,minimumFractionDigits:dp??0}).format(n); }
+  catch(e){ return cur+" "+(+n).toFixed(dp??0); }
+}
+const sgn = n => (n>0?"+":n<0?"−":"") + fmt(Math.abs(n));
+const pct = (n,dp=1) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
+const num = v => { const x=parseFloat(v); return isFinite(x)?x:NaN; };
+function price(v){ return v>=100 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v.toLocaleString(undefined,{maximumSignificantDigits:5}); }
+
+function read(){
+  const d0=num($("lD").value);
+  const sf=$("lSp");
+  if(lAuto && d0>0 && document.activeElement!==sf) sf.value = +(100-d0).toFixed(4);
+  return { s: sf.value.trim()==="" ? d0 : 100-num(sf.value), d:d0, I:num($("lI").value), m:num($("lM").value), L:num($("lL").value),
+    dmin:num($("lMin").value), P0:num($("lP0").value), mode:$("lMode").value, range:num($("lRange").value), liq:$("lLiq").checked };
+}
+function validate(p){
+  if(!(p.d>0)) return "Dip step d must be greater than 0.";
+  if(!(p.s>=0 && p.s<100)) return "First buy level s must be above 0% and at most 100% of the peak.";
+  if(!(p.I>0)) return "First investment I must be greater than 0.";
+  if(!(p.m>=0)) return "Magnitude m can't be negative.";
+  if(!(p.L>=1)) return "Leverage L must be at least 1.";
+  if(!(p.dmin>=0 && p.dmin<100)) return "Bottom dmin must be between 0 and 99.9%.";
+  if(!(p.P0>0)) return "Peak price must be greater than 0.";
+  if(!(p.range>0)) return "Chart range must be greater than 0.";
+  return "";
+}
+
+/* Build the ladder: tranche k buys at P0*(1 - k*d) for every k*d <= dmin */
+function build(p){
+  const Pt = p.P0*(1-p.dmin/100), tr=[];
+  for(let k=1; p.s+(k-1)*p.d <= p.dmin+1e-9 && k<=500; k++){
+    const drop = p.s+(k-1)*p.d, px = p.P0*(1-drop/100);
+    if(px<=0) break;
+    const margin = p.I*Math.pow(p.m,k-1), notional = margin*p.L;
+    const liqPx = p.L>1 ? px*(1-1/p.L) : 0;
+    const dead = p.liq && p.L>1 && Pt <= liqPx + 1e-12;
+    tr.push({k,drop,px,margin,notional,units:notional/px,liqPx,dead});
+  }
+  return {Pt,tr};
+}
+function pnlTr(t,Pf){ return t.dead ? -t.margin : t.units*(Pf-t.px); }
+function pnl(tr,Pf){ return tr.reduce((a,t)=>a+pnlTr(t,Pf),0); }
+function finalPrice(p,Pt,x){ return p.mode==="bottom" ? Pt*(1+x/100) : p.P0*(1+x/100); }
+function xOf(p,Pt,Pf){ return p.mode==="bottom" ? (Pf/Pt-1)*100 : (Pf/p.P0-1)*100; }
+function xLabel(p,x){ return p.mode==="bottom" ? `${pct(x)} from bottom` : (Math.abs(x)<1e-9 ? "back at peak" : `${pct(x)} vs. peak`); }
+
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+function render(){
+  const p = read();
+  try{ const o={}; ids.forEach(i=>{ o[i] = i==="lLiq" ? $(i).checked : $(i).value; }); o.lSpManual=!lAuto; localStorage.setItem(LK, JSON.stringify(o)); }catch(e){}
+  const err = validate(p); $("lErr").textContent = err;
+  if(err) return;
+  const {Pt,tr} = build(p);
+  const cap = tr.reduce((a,t)=>a+t.margin,0);
+  const xMin = p.mode==="bottom" ? 0 : -p.dmin, xMax = p.mode==="bottom" ? p.range : p.range;
+  if(xMax<=xMin){ $("lErr").textContent = "Chart range must reach above the bottom."; return; }
+
+  // Summary
+  $("lCap").textContent = fmt(cap);
+  const nDead = tr.filter(t=>t.dead).length;
+  $("lN").textContent = tr.length ? `${tr.length}${nDead?` (${nDead} liquidated)`:""}` : "None";
+  $("lN").className = nDead ? "neg small" : (tr.length>3?"small":"");
+  const atBottom = pnl(tr,Pt);
+  $("lTrough").textContent = tr.length ? sgn(atBottom) : "—";
+  $("lTrough").className = atBottom<0 ? "neg" : "";
+  const live = tr.filter(t=>!t.dead), S = live.reduce((a,t)=>a+t.units,0), A = live.reduce((a,t)=>a+t.notional,0);
+  const lost = tr.filter(t=>t.dead).reduce((a,t)=>a+t.margin,0);
+  let be = null;
+  $("lBEl").innerHTML = p.mode==="bottom" ? "Breakeven<br>(from bottom)" : "Breakeven<br>(vs. peak)";
+  if(S>0){ be = (A+lost)/S; $("lBE").textContent = pct(xOf(p,Pt,be)); $("lBE").className="small"; }
+  else { $("lBE").textContent = tr.length ? "Not reachable" : "—"; $("lBE").className = tr.length ? "neg small" : "small"; }
+
+  // Chart data
+  const N=240, pts=[];
+  for(let i=0;i<=N;i++){ const x = xMin + (xMax-xMin)*i/N; const v = pnl(tr, finalPrice(p,Pt,x)); pts.push({x, y:v}); }
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
+  const ds = {
+    label:"Gain / loss", data:pts, parsing:false, pointRadius:0, borderWidth:2.5, tension:0,
+    segment:{ borderColor: c => (c.p0.parsed.y+c.p1.parsed.y)/2 >= 0 ? green : red },
+    fill:{ target:"origin", above: green+"22", below: red+"22" }
+  };
+  const xTitle = p.mode==="bottom" ? "Rebound from the bottom (%)" : "Final price vs. peak (%)";
+  const opts = {
+    responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"index",intersect:false},
+    scales:{
+      x:{ type:"linear", min:xMin, max:xMax, title:{display:true,text:xTitle,color:muted}, ticks:{color:muted,callback:v=>v+"%"}, grid:{color:line} },
+      y:{ title:{display:true,text:"Gain / loss",color:muted}, ticks:{color:muted,callback:v=>fmt(v)}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} }
+    },
+    plugins:{ legend:{display:false},
+      tooltip:{ callbacks:{
+        title: items => xLabel(p, items[0].parsed.x),
+        label: it => { const v=it.parsed.y; return `${sgn(v)}  (${cap?pct(v/cap*100):"0%"} of capital)`; }
+      }}
+    }
+  };
+  if(window.Chart){
+    if(chart){ chart.data.datasets=[ds]; chart.options=opts; chart.update(); }
+    else chart = new Chart($("lChart"), {type:"line", data:{datasets:[ds]}, options:opts});
+  }
+
+  // Slider + table
+  const sl=$("lSel"); sl.min=xMin; sl.max=xMax;
+  if(pinMax) sl.value = xMax;
+  else if(+sl.value<xMin||+sl.value>xMax) sl.value = be!==null ? Math.min(xMax,Math.max(xMin,xOf(p,Pt,be))) : xMin;
+  const xs=+sl.value, Pf=finalPrice(p,Pt,xs);
+  $("lSelV").textContent = `${xLabel(p,xs)} (price ${price(Pf)})`;
+  document.querySelectorAll(".curcode").forEach(e=>e.textContent=$("currency").value||"SGD");
+  const body=$("lBody"); body.innerHTML="";
+  if(!tr.length){ const r=document.createElement("tr"); r.innerHTML=`<td colspan="14" class="empty">The bottom never reaches the first buy level s, so nothing is bought. Lower s or deepen d<sub>min</sub>.</td>`; body.appendChild(r); }
+  let tot=0;
+  // Remaining margin (equity) of a tranche at price P: margin + unrealized P&L; 0 once liquidated
+  // Margin value at price P: the invested amount moves with the price (invested × P / buy price); 0 once liquidated
+  const eq = (t,P) => (p.liq && p.L>1 && P <= t.liqPx + 1e-12) ? 0 : t.margin * P / t.px;
+  const unitsFmt = u => u.toLocaleString(undefined,{maximumSignificantDigits:5});
+  tr.forEach((t,i)=>{
+    // Holdings right after this buy: this tranche plus earlier ones not yet liquidated at this price
+    const held = tr.slice(0,i+1).filter(j => !(p.liq && p.L>1 && j.k<t.k && t.px <= j.liqPx + 1e-12));
+    const hU = held.reduce((a,j)=>a+j.units,0), hN = held.reduce((a,j)=>a+j.notional,0);
+    const hM = held.reduce((a,j)=>a+eq(j,t.px),0); // earlier margins shrink as price falls to this buy
+    const hL = tr.slice(0,i+1).reduce((a,j)=> a + (held.includes(j) ? j.units*(t.px-j.px) : -j.margin), 0);
+    const hI = tr.slice(0,i+1).reduce((a,j)=>a+j.margin,0);
+    const gone = i+1-held.length;
+    t.hU=hU; t.hN=hN;
+    const v=pnlTr(t,Pf); tot+=v;
+    const r=document.createElement("tr");
+    const liqTxt = p.L>1 ? `${(t.liqPx/p.P0*100).toFixed(1)}%` : "—";
+    r.innerHTML = `<td>${t.k}</td><td>${(100-t.drop).toFixed(1)}%</td><td>${price(t.px)}</td><td>${tf(t.margin)}</td><td>${unitsFmt(t.units)}</td><td>${unitsFmt(hU)}</td><td>${price(hN/hU)}${gone?`<small class="blk" title="Excludes ${gone} tranche${gone>1?"s":""} already liquidated">excl. ${gone}</small>`:""}</td><td>${tf(hM)}</td><td class="${eq(t,Pt)<t.margin-1e-9?"neg":""}">${tf(eq(t,Pt))}</td><td class="${hL<-1e-9?"neg":""}">${ts(hL)}</td><td>${tf(hM+Math.abs(hL))}</td><td>${liqTxt}</td>
+      <td>${t.dead?'<span class="tag dead" title="Liquidated">Liq.</span>':'<span class="tag ok">Open</span>'}</td>
+      <td class="${v>=0?"pos":"neg"}">${ts(v)}${t.dead?"":`<small class="blk">${pct(v/t.margin*100,0)}</small>`}</td>`;
+    body.appendChild(r);
+  });
+  $("lFI").textContent=tf(cap); $("lFP").textContent = tr.length ? tf(tr.reduce((a,t)=>a+eq(t,Pt),0)) : "";
+  $("lFU").textContent = tr.length ? unitsFmt(tr.reduce((a,t)=>a+t.units,0)) : "";
+  // Footer holdings = what survives the bottom
+  const sv = tr.filter(t=>!t.dead), sU = sv.reduce((a,t)=>a+t.units,0), sN = sv.reduce((a,t)=>a+t.notional,0);
+  $("lFH").textContent = tr.length ? unitsFmt(sU) : ""; $("lFT").textContent = tr.length ? tf(tr.reduce((a,t)=>a+eq(t,Pt),0)) : "";
+  $("lFA").textContent = sU>0 ? price(sN/sU) : (tr.length?"—":"");
+  { const L0 = pnl(tr,Pt), M0 = tr.reduce((a,t)=>a+eq(t,Pt),0);
+    $("lFL").textContent = tr.length ? ts(L0) : ""; $("lFL").className = L0<0?"neg":"";
+    $("lFS").textContent = tr.length ? tf(M0+Math.abs(L0)) : "";
+    $("lML").textContent = tr.length ? tf(M0+Math.abs(L0)) : "—"; }
+  $("lFR").innerHTML = ts(tot) + (cap?`<small class="blk">${pct(tot/cap*100)}</small>`:"");
+  $("lPL").textContent = tr.length ? sgn(tot) : "—";
+  $("lPLp").innerHTML = p.mode==="bottom" ? `P&amp;L at<br>rebound ${xs.toFixed(1).replace(/\.0$/,"")}%` : `P&amp;L at<br>${pct(xs).replace(/\.0%$/,"%")} vs. peak`;
+  $("lPL").className = tr.length ? (tot>=0?"pos":"neg") : ""; $("lFR").className = tot>=0?"pos":"neg";
+}
+
+$("lMode").addEventListener("change",()=>{
+  const r=$("lRange"); if($("lMode").value==="peak" && +r.value>100) r.value=30;
+  pinMax = true;
+});
+try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o) ids.forEach(i=>{ if(o[i]!==undefined){ if(i==="lLiq") $(i).checked=!!o[i]; else $(i).value=o[i]; } }); }catch(e){}
+try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); lAuto = !(o && o.lSpManual && $("lSp").value.trim()!==""); }catch(e){ lAuto=true; }
+$("lSp").addEventListener("input",()=>{ lAuto = $("lSp").value.trim()===""; });
+$("lSp").addEventListener("blur",()=>{ if(lAuto) render(); });
+ids.forEach(i=>$(i).addEventListener("input",render));
+$("lMode").addEventListener("change",render); $("lLiq").addEventListener("change",render);
+$("lSel").addEventListener("input",()=>{ const sl=$("lSel"); pinMax = +sl.value >= +sl.max - 1e-9; render(); });
+$("currency").addEventListener("change",render);
+const mq = window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} render(); });
+render();
+})();
+</script>
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const LK = "finmon-short-ladder-v1";
+const tf = v => Math.round(v).toLocaleString();                       // table amounts, no currency
+const ts = v => (v>0.5?"+":v<-0.5?"−":"") + tf(Math.abs(v));
+let sAuto = true; // s follows 100 + d until the user types their own value
+const ids = ["sSp","sD","sI","sM","sL","sMax","sP0","sMode","sRange","sLiq"];
+let chart = null;
+function fmt(n){
+  const cur = $("currency").value || "SGD";
+  try{ return new Intl.NumberFormat(undefined,{style:"currency",currency:cur,maximumFractionDigits:0}).format(n); }
+  catch(e){ return cur+" "+(+n).toFixed(0); }
+}
+const sgn = n => (n>0?"+":n<0?"−":"") + fmt(Math.abs(n));
+const pct = (n,dp=1) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
+const num = v => { const x=parseFloat(v); return isFinite(x)?x:NaN; };
+const price = v => v>=100 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v.toLocaleString(undefined,{maximumSignificantDigits:5});
+const unitsFmt = u => u.toLocaleString(undefined,{maximumSignificantDigits:5});
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function read(){
+  const d0=num($("sD").value);
+  const sf=$("sSp");
+  if(sAuto && d0>0 && document.activeElement!==sf) sf.value = +(100+d0).toFixed(4);
+  return { s: sf.value.trim()==="" ? d0 : num(sf.value)-100, d:d0, I:num($("sI").value), m:num($("sM").value), L:num($("sL").value),
+    dmax:num($("sMax").value), P0:num($("sP0").value), mode:$("sMode").value, range:num($("sRange").value), liq:$("sLiq").checked };
+}
+function validate(p){
+  if(!(p.d>0)) return "Rise step d must be greater than 0.";
+  if(!(p.s>=0)) return "First sell level s must be at least 100% of the bottom.";
+  if(!(p.I>0)) return "First investment I must be greater than 0.";
+  if(!(p.m>=0)) return "Magnitude m can't be negative.";
+  if(!(p.L>=1)) return "Leverage L must be at least 1.";
+  if(!(p.dmax>=0 && p.dmax<=1000)) return "Top dmax must be between 0 and 1000%.";
+  if(!(p.P0>0)) return "Bottom price must be greater than 0.";
+  if(!(p.range>0)) return "Chart range must be greater than 0.";
+  if(p.mode==="top" && p.range>=100) return "In “% down from the top” mode the chart can go down to at most 99%.";
+  if(p.mode==="start" && p.range>=100) return "The price can't fall 100% or more below the bottom.";
+  return "";
+}
+/* P0 = bottom price. Tranche k sells short at P0*(1 + k*d) for every k*d <= dmax */
+function build(p){
+  const Ptop = p.P0*(1+p.dmax/100), tr=[];
+  for(let k=1; p.s+(k-1)*p.d <= p.dmax+1e-9 && k<=500; k++){
+    const rise = p.s+(k-1)*p.d, px = p.P0*(1+rise/100);
+    const margin = p.I*Math.pow(p.m,k-1), notional = margin*p.L;
+    const liqPx = px*(1+1/p.L);                 // loss = margin when price rises 1/L
+    const dead = p.liq && Ptop >= liqPx - 1e-12;
+    tr.push({k,rise,px,margin,notional,units:notional/px,liqPx,dead});
+  }
+  return {Ptop,tr};
+}
+const pnlTr = (t,Pf) => t.dead ? -t.margin : t.units*(t.px-Pf);
+const pnl = (tr,Pf) => tr.reduce((a,t)=>a+pnlTr(t,Pf),0);
+// x axis value: "top" mode = % drop from top (0..range); "start" mode = price vs bottom (dmax .. -range)
+const finalPrice = (p,Ptop,x) => p.mode==="top" ? Ptop*(1-x/100) : p.P0*(1+x/100);
+const xOf = (p,Ptop,Pf) => p.mode==="top" ? (1-Pf/Ptop)*100 : (Pf/p.P0-1)*100;
+const xLabel = (p,x) => p.mode==="top" ? (Math.abs(x)<1e-9?"at the top":`${Math.abs(x).toFixed(1)}% down from top`) : (Math.abs(x)<1e-9?"back at the bottom":`${pct(x)} vs. bottom`);
+
+function render(){
+  const p = read();
+  try{ const o={}; ids.forEach(i=>{ o[i] = i==="sLiq" ? $(i).checked : $(i).value; }); o.sSpManual=!sAuto; localStorage.setItem(LK, JSON.stringify(o)); }catch(e){}
+  const err = validate(p); $("sErr").textContent = err;
+  if(err) return;
+  const {Ptop,tr} = build(p);
+  const cap = tr.reduce((a,t)=>a+t.margin,0);
+  const xA = p.mode==="top" ? 0 : p.dmax, xB = p.mode==="top" ? p.range : -p.range; // left (top) -> right (lower)
+  const lo = Math.min(xA,xB), hi = Math.max(xA,xB);
+
+  $("sCap").textContent = fmt(cap);
+  const nDead = tr.filter(t=>t.dead).length;
+  $("sN").textContent = tr.length ? `${tr.length}${nDead?` (${nDead} liquidated)`:""}` : "None";
+  $("sN").className = nDead ? "neg small" : (tr.length>3?"small":"");
+  const atTop = pnl(tr,Ptop);
+  $("sTop").textContent = tr.length ? sgn(atTop) : "—";
+  $("sTop").className = atTop<0 ? "neg" : "";
+  const live = tr.filter(t=>!t.dead), S = live.reduce((a,t)=>a+t.units,0), A = live.reduce((a,t)=>a+t.notional,0);
+  const lost = tr.filter(t=>t.dead).reduce((a,t)=>a+t.margin,0);
+  let be = null;
+  $("sBEl").innerHTML = p.mode==="top" ? "Breakeven<br>(from top)" : "Breakeven<br>(vs. bottom)";
+  if(S>0 && (A-lost)/S>0){ be=(A-lost)/S; { const xb=xOf(p,Ptop,be); $("sBE").textContent = p.mode==="top" ? (xb<=1e-9?"0%":"−"+xb.toFixed(1)+"%") : pct(xb); } $("sBE").className="small"; }
+  else { $("sBE").textContent = tr.length ? "Not reachable" : "—"; $("sBE").className = tr.length ? "neg small" : "small"; }
+
+  const N=240, pts=[];
+  for(let i=0;i<=N;i++){ const x = xA + (xB-xA)*i/N; pts.push({x, y:pnl(tr, finalPrice(p,Ptop,x))}); }
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
+  const ds = { label:"Gain / loss", data:pts, parsing:false, pointRadius:0, borderWidth:2.5, tension:0,
+    segment:{ borderColor: c => (c.p0.parsed.y+c.p1.parsed.y)/2 >= 0 ? green : red },
+    fill:{ target:"origin", above: green+"22", below: red+"22" } };
+  const opts = {
+    responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"index",intersect:false},
+    scales:{
+      x:{ type:"linear", min:lo, max:hi, reverse: p.mode==="start",
+          title:{display:true,text: p.mode==="top" ? "Drop from the top (%)" : "Final price vs. bottom (%)",color:muted},
+          ticks:{color:muted,callback:v=>v+"%"}, grid:{color:line} },
+      y:{ title:{display:true,text:"Gain / loss",color:muted}, ticks:{color:muted,callback:v=>fmt(v)}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} }
+    },
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{
+      title: items => xLabel(p, items[0].parsed.x),
+      label: it => { const v=it.parsed.y; return `${sgn(v)}  (${cap?pct(v/cap*100):"0%"} of capital)`; } } } }
+  };
+  if(window.Chart){
+    if(chart){ chart.data.datasets=[ds]; chart.options=opts; chart.update(); }
+    else chart = new Chart($("sChart"), {type:"line", data:{datasets:[ds]}, options:opts});
+  }
+
+  const xs = xA + (xB-xA)*(+$("sSel").value/1000), Pf = finalPrice(p,Ptop,xs);
+  $("sSelV").textContent = `${xLabel(p,xs)} (price ${price(Pf)})`;
+  // Margin at price P: invested amount moves with the price (invested × P / sell price); 0 once liquidated
+  const eq = (t,P) => (p.liq && P >= t.liqPx - 1e-12) ? 0 : t.margin * P / t.px;
+  const body=$("sBody"); body.innerHTML="";
+  if(!tr.length){ const r=document.createElement("tr"); r.innerHTML=`<td colspan="14" class="empty">The top never reaches the first sell level s, so nothing is sold. Lower s or raise d<sub>max</sub>.</td>`; body.appendChild(r); }
+  let tot=0;
+  tr.forEach((t,i)=>{
+    const held = tr.slice(0,i+1).filter(j => !(p.liq && j.k<t.k && t.px >= j.liqPx - 1e-12));
+    const hU = held.reduce((a,j)=>a+j.units,0), hN = held.reduce((a,j)=>a+j.notional,0);
+    const hM = held.reduce((a,j)=>a+eq(j,t.px),0);
+    const hL = tr.slice(0,i+1).reduce((a,j)=> a + (held.includes(j) ? j.units*(j.px-t.px) : -j.margin), 0);
+    const hI = tr.slice(0,i+1).reduce((a,j)=>a+j.margin,0);
+    const gone = i+1-held.length;
+    const v=pnlTr(t,Pf); tot+=v;
+    const mTop = eq(t,Ptop);
+    const r=document.createElement("tr");
+    r.innerHTML = `<td>${t.k}</td><td>${(100+t.rise).toFixed(1)}%</td><td>${price(t.px)}</td><td>${tf(t.margin)}</td><td>${unitsFmt(t.units)}</td><td>${unitsFmt(hU)}</td><td>${price(hN/hU)}${gone?`<small class="blk" title="Excludes ${gone} tranche${gone>1?"s":""} already liquidated">excl. ${gone}</small>`:""}</td><td>${tf(hM)}</td><td class="${mTop<t.margin-1e-9?"neg":""}">${tf(mTop)}</td><td class="${hL<-1e-9?"neg":""}">${ts(hL)}</td><td>${tf(hM+Math.abs(hL))}</td><td>${(t.liqPx/p.P0*100).toFixed(1)}%</td>
+      <td>${t.dead?'<span class="tag dead" title="Liquidated">Liq.</span>':'<span class="tag ok">Open</span>'}</td>
+      <td class="${v>=0?"pos":"neg"}">${ts(v)}${t.dead?"":`<small class="blk">${pct(v/t.margin*100,0)}</small>`}</td>`;
+    body.appendChild(r);
+  });
+  const sv = tr.filter(t=>!t.dead), sU = sv.reduce((a,t)=>a+t.units,0), sN = sv.reduce((a,t)=>a+t.notional,0);
+  const mAll = tr.reduce((a,t)=>a+eq(t,Ptop),0);
+  $("sFI").textContent=tf(cap); $("sFP").textContent = tr.length ? tf(mAll) : "";
+  $("sFU").textContent = tr.length ? unitsFmt(tr.reduce((a,t)=>a+t.units,0)) : "";
+  $("sFH").textContent = tr.length ? unitsFmt(sU) : ""; $("sFT").textContent = tr.length ? tf(mAll) : "";
+  $("sFA").textContent = sU>0 ? price(sN/sU) : (tr.length?"—":"");
+  { const L0 = pnl(tr,Ptop);
+    $("sFL").textContent = tr.length ? ts(L0) : ""; $("sFL").className = L0<0?"neg":"";
+    $("sFS").textContent = tr.length ? tf(mAll+Math.abs(L0)) : "";
+    $("sML").textContent = tr.length ? tf(mAll+Math.abs(L0)) : "—"; }
+  $("sFR").innerHTML = ts(tot) + (cap?`<small class="blk">${pct(tot/cap*100)}</small>`:"");
+  $("sPL").textContent = tr.length ? sgn(tot) : "—";
+  $("sPLp").innerHTML = p.mode==="top" ? `P&amp;L at<br>drop ${xs.toFixed(1).replace(/\.0$/,"")}%` : `P&amp;L at<br>${pct(xs).replace(/\.0%$/,"%")} vs. bottom`;
+  $("sPL").className = tr.length ? (tot>=0?"pos":"neg") : ""; $("sFR").className = tot>=0?"pos":"neg";
+}
+try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o) ids.forEach(i=>{ if(o[i]!==undefined){ if(i==="sLiq") $(i).checked=!!o[i]; else $(i).value=o[i]; } }); }catch(e){}
+try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); sAuto = !(o && o.sSpManual && $("sSp").value.trim()!==""); }catch(e){ sAuto=true; }
+$("sSp").addEventListener("input",()=>{ sAuto = $("sSp").value.trim()===""; });
+$("sSp").addEventListener("blur",()=>{ if(sAuto) render(); });
+ids.forEach(i=>$(i).addEventListener("input",render));
+$("sMode").addEventListener("change",render); $("sLiq").addEventListener("change",render);
+$("sSel").addEventListener("input",render);
+$("currency").addEventListener("change",render);
+// Chart.js needs a visible canvas to size; redraw when the tab is opened
+document.querySelectorAll('.tabs button[data-view="short"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} requestAnimationFrame(render); }));
+const mq = window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} render(); });
+render();
+})();
+</script>
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const LK = "finmon-gap-v2";
+let D = null, chart = null, dates = [], ts = [];
+
+const pct = (n,dp=2) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+
+async function load(){
+  try{
+    const r = await fetch("data/indices.json", {cache:"no-store"});
+    if(!r.ok) throw new Error(r.status);
+    D = await r.json();
+  }catch(e){
+    $("gSrc").textContent = "Couldn't load the index data (data/indices.json). If the site is new, run the workflow once from the Actions tab.";
+    return;
+  }
+  dates = D.dates; ts = dates.map(d=>Date.parse(d+"T00:00:00Z"));
+  const keys = Object.keys(D.series);
+  keys.forEach(k=>["gA","gB"].forEach(id=>{ const o=document.createElement("option"); o.value=k; o.textContent=(D.meta[k]&&D.meta[k].name)||k; $(id).appendChild(o); }));
+  $("gA").value = keys.includes("US100")?"US100":keys[0];
+  $("gB").value = keys.includes("US2000")?"US2000":keys[1]||keys[0];
+  $("gQuick").value = "5y";
+  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B; if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick; $("gShowAB").checked=o.ab!==false; } }catch(e){}
+  render();
+}
+
+function applyQuick(firstIdx){
+  const q=$("gQuick").value; if(!q) return;
+  const firstD=dates[firstIdx];
+  if(q==="all"){ $("gStart").value=firstD; return; }
+  const last=new Date(dates[dates.length-1]+"T00:00:00"); let t=new Date(last);
+  if(q==="ytd") t=new Date(last.getFullYear(),0,1);
+  else { const n=parseInt(q,10); if(q.endsWith("m")) t.setMonth(t.getMonth()-n); else t.setFullYear(t.getFullYear()-n); }
+  const want=iso(t);
+  $("gStart").value = want<firstD ? firstD : (dates.find(d=>d>=want)||firstD);
+}
+
+function render(){
+  if(!D) return;
+  const A=$("gA").value, B=$("gB").value, va=D.series[A], vb=D.series[B];
+  try{ localStorage.setItem(LK, JSON.stringify({A,B,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked})); }catch(e){}
+  $("gErr").textContent = A===B ? "Index A and B are the same, so the gap is always zero. Pick two different indices." : "";
+  // first date where both indices have a close
+  let first=-1; for(let i=0;i<dates.length;i++){ if(va[i]!=null && vb[i]!=null){ first=i; break; } }
+  if(first<0){ $("gErr").textContent="These two indices have no dates in common."; return; }
+  $("gStart").min=dates[first]; $("gStart").max=dates[dates.length-1];
+  applyQuick(first);
+  let st=$("gStart").value;
+  if(!st || st<dates[first]) { st=dates[first]; $("gStart").value=st; }
+  if(st>dates[dates.length-1]) { st=dates[dates.length-1]; $("gStart").value=st; }
+  let s0=dates.findIndex(d=>d>=st); if(s0<first) s0=first;
+
+  // start date = 0; then add each day's % (holidays were filled with the previous close, so they add 0%)
+  const pA=[], pB=[], pG=[]; let ca=0, cb=0, iMax=s0, iMin=s0, gMax=0, gMin=0;
+  for(let i=s0;i<dates.length;i++){
+    if(i>s0){ ca += (va[i]/va[i-1]-1)*100; cb += (vb[i]/vb[i-1]-1)*100; }
+    const g=ca-cb; pA.push({x:ts[i],y:ca}); pB.push({x:ts[i],y:cb}); pG.push({x:ts[i],y:g});
+    if(g>gMax){gMax=g;iMax=i;} if(g<gMin){gMin=g;iMin=i;}
+  }
+  const set=(id,v)=>{ $(id).textContent=pct(v); $(id).className=v>=0?"pos":"neg"; };
+  $("gLA").textContent=`Accumulated ${A}`; $("gLB").textContent=`Accumulated ${B}`;
+  set("gVA",ca); set("gVB",cb); set("gVG",ca-cb);
+  set("gVMax",gMax); $("gVMax").title=fmtD(dates[iMax]);
+  set("gVMin",gMin); $("gVMin").title=fmtD(dates[iMin]);
+  $("gVN").textContent=String(dates.length-1-s0); $("gVN").className="";
+  $("gTitle").textContent=`Accumulated ${A} − accumulated ${B}, ${fmtD(dates[s0])} to ${fmtD(dates[dates.length-1])}`;
+  const mA=D.meta[A]||{}, mB=D.meta[B]||{};
+  const notes=[mA,mB].filter(m=>m.substitute).map(m=>m.substitute);
+  const upd=new Date(D.generated).toLocaleString(undefined,{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  $("gSrc").textContent = `Daily closes from Yahoo Finance (${mA.ticker||A}, ${mB.ticker||B}), updated ${upd}. Latest close: ${A} ${fmtD(mA.last||dates[dates.length-1])}, ${B} ${fmtD(mB.last||dates[dates.length-1])}. Weekdays with no close (holidays) carry the previous close forward and count as 0%.${notes.length?" Note: "+notes.join("; ")+".":""}${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")} (previous data kept).`:""}`;
+
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line"), c2=cssVar("--c2"), c1=cssVar("--c1");
+  const ds=[{ label:`Gap ${A} − ${B}`, data:pG, parsing:false, borderWidth:2.2, pointRadius:0, tension:0, borderColor:green,
+      segment:{ borderColor:c=>(c.p0.parsed.y+c.p1.parsed.y)/2>=0?green:red }, fill:{target:"origin", above:green+"22", below:red+"22"} }];
+  if($("gShowAB").checked){
+    ds.push({ label:`Accumulated ${A}`, data:pA, parsing:false, borderColor:c2, borderWidth:1.4, pointRadius:0, borderDash:[5,4], fill:false });
+    ds.push({ label:`Accumulated ${B}`, data:pB, parsing:false, borderColor:c1, borderWidth:1.4, pointRadius:0, borderDash:[2,3], fill:false });
+  }
+  const span=ts[ts.length-1]-ts[s0], long=span>3*365*864e5;
+  const opts={ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"nearest",axis:"x",intersect:false},
+    scales:{ x:{ type:"linear", min:ts[s0], max:ts[ts.length-1], ticks:{color:muted, maxTicksLimit:8, callback:v=>new Date(v).toLocaleDateString(undefined, long?{year:"numeric"}:{month:"short",year:"2-digit"})}, grid:{color:line} },
+             y:{ title:{display:true,text:"Accumulated gain/loss (%)",color:muted}, ticks:{color:muted,callback:v=>v+"%"}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} } },
+    plugins:{ decimation:{enabled:true, algorithm:"lttb", samples:900},
+      legend:{ display:$("gShowAB").checked, labels:{color:muted, boxWidth:18} },
+      tooltip:{ callbacks:{ title:it=>new Date(it[0].parsed.x).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"}), label:it=>`${it.dataset.label}: ${pct(it.parsed.y)}` } } } };
+  if(window.Chart){
+    if(chart){ chart.data.datasets=ds; chart.options=opts; chart.update(); }
+    else chart=new Chart($("gChart"),{type:"line",data:{datasets:ds},options:opts});
+  }
+}
+
+["gA","gB","gShowAB","gQuick"].forEach(id=>$(id).addEventListener("change",render));
+$("gStart").addEventListener("change",()=>{ $("gQuick").value=""; render(); });
+document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} requestAnimationFrame(render); }));
+const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} render(); });
+load();
+})();
+</script>
+</body>
+</html>

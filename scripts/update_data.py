@@ -16,7 +16,7 @@ import pandas as pd
 # key, display name, Yahoo tickers to try in order (the first one that returns data is used)
 INDICES = [
     ("AUS200", "Australia 200 (ASX 200)",          ["^AXJO"]),
-    ("CAN60",  "Canada 60 (S&P/TSX 60)",           ["^TX60", "TX60.TS", "^GSPTSE"]),
+    ("CAN60",  "Canada 60 (S&P/TSX 60)",           ["^TX60", "XIU.TO", "^GSPTSE"]),
     ("FRA40",  "France 40 (CAC 40)",               ["^FCHI"]),
     ("GER40",  "Germany 40 (DAX)",                 ["^GDAXI"]),
     ("HK50",   "Hong Kong 50 (Hang Seng)",         ["^HSI"]),
@@ -30,7 +30,11 @@ INDICES = [
     ("US2000", "US Small Cap 2000 (Russell 2000)", ["^RUT"]),
 ]
 # tickers that are a stand-in for the intended index (shown as a note on the page)
-SUBSTITUTE = {"^GSPTSE": "S&P/TSX Composite is used because the TSX 60 was unavailable"}
+SUBSTITUTE = {
+    "XIU.TO": "Canada 60 uses the iShares S&P/TSX 60 ETF (XIU.TO); on its quarterly dividend days the daily % is slightly lower than the index",
+    "^GSPTSE": "Canada 60 uses the S&P/TSX Composite because the TSX 60 was unavailable",
+}
+MIN_ROWS = 250  # a ticker must return at least about a year of history to be used
 OUT = Path(__file__).resolve().parent.parent / "data" / "indices.json"
 
 
@@ -51,7 +55,8 @@ def download(tickers, start, end):
         if isinstance(close, pd.DataFrame):  # newer yfinance returns a one-column frame
             close = close.iloc[:, 0]
         close = clean(close)
-        if close.empty:
+        if len(close) < MIN_ROWS:
+            print(f"  {t}: only {len(close)} rows, trying the next ticker")
             continue
         return t, close
     return None, None

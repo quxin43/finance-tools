@@ -160,6 +160,12 @@ button{font:inherit;cursor:pointer}
 .lad-totals div{display:flex;flex-direction:column;justify-content:space-between;gap:4px}
 .lad-totals b,.lad-totals b.small{font-size:1rem;white-space:nowrap;margin-top:0;overflow:hidden;text-overflow:ellipsis}
 .lad-totals .plp{font-weight:500}
+.rank{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+.rank b{font:600 1rem "Familjen Grotesk",sans-serif;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank b.pos{color:var(--green)} .rank b.neg{color:var(--red)}
+.chart-box.tall{height:420px}
+@media (max-width:700px){.chart-box.tall{height:460px}}
+.ghost:disabled{opacity:.5;cursor:default}
 [hidden]{display:none!important}
 @media (max-width:520px){
   .totals b{font-size:1.1rem}
@@ -291,15 +297,20 @@ button{font:inherit;cursor:pointer}
   <main id="gap" hidden>
     <section class="ledger">
       <h2 class="lad-title">Index gap analysis</h2>
-      <p class="lad-intro">Pick two indices and a start date. Each day's gain or loss is close ÷ previous close − 1. The accumulated gain/loss is the <em>sum</em> of those daily percentages from the start date to the last date (not last close ÷ start close). The chart shows accumulated A − accumulated B for each date.</p>
+      <p class="lad-intro">Pick a start date and two indices. Each day's gain or loss is close ÷ previous close − 1. The accumulated gain/loss is the <em>sum</em> of those daily percentages from the start date to the last date (not last close ÷ start close). The charts show every index's accumulated gain/loss and the gap between A and B.</p>
       <div class="lad-inputs lad-first">
-        <label><span>Index A</span><select id="gA"></select></label>
-        <label><span>Index B</span><select id="gB"></select></label>
         <label><span>Start date</span><input type="date" id="gStart"></label>
-        <label><span>Quick range</span><select id="gQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="20y">20 years</option><option value="all">All data</option></select></label>
+        <label><span>Quick range</span><select id="gQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="20y">20 years</option><option value="all">All (common start)</option></select></label>
+        <div class="rank"><span>Best index</span><b id="gBest">—</b></div>
+        <div class="rank"><span>Worst index</span><b id="gWorst">—</b></div>
       </div>
       <div class="lad-inputs">
-        <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B</label>
+        <label><span>Index A</span><select id="gA"></select></label>
+        <label><span>Index B</span><select id="gB"></select></label>
+        <label><span>&nbsp;</span><button class="ghost" id="gAuto" type="button" title="A follows the best index and B the worst whenever the start date changes">Use best vs worst</button></label>
+      </div>
+      <div class="lad-inputs">
+        <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B on the gap chart</label>
       </div>
       <p class="err" id="gErr" role="alert"></p>
       <div class="totals lad-totals">
@@ -309,6 +320,17 @@ button{font:inherit;cursor:pointer}
         <div><span>Highest gap</span><b id="gVMax">—</b></div>
         <div><span>Lowest gap</span><b id="gVMin">—</b></div>
         <div><span>Days in range</span><b id="gVN">—</b></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="txhead">
+        <h3 id="gAllTitle">All indices: accumulated gain/loss</h3>
+        <button class="ghost" id="gAllToggle" type="button" aria-expanded="true" aria-controls="gAllBody">Hide chart</button>
+      </div>
+      <div id="gAllBody">
+        <div class="chart-box tall"><canvas id="gAllChart" role="img" aria-label="Accumulated gain/loss of every index by date"></canvas></div>
+        <p class="hint lad-note" id="gAllNote">Click a name in the legend to hide or show that index.</p>
       </div>
     </section>
 
@@ -677,13 +699,16 @@ render();
 (function(){
 "use strict";
 const $ = id => document.getElementById(id);
-const LK = "finmon-gap-v2";
-let D = null, chart = null, dates = [], ts = [];
+const LK = "finmon-gap-v3";
+const PALETTE = ["#2F6B4F","#B8892B","#3E6C8F","#8E5B8C","#B9653A","#6E9A78","#A44A4A","#5B6FB5","#C2A13A","#2E8C8C","#9C6B3E","#7A4FA0","#5F7F2E"];
+let D = null, chart = null, allChart = null, dates = [], ts = [], keys = [];
+let auto = true, showAll = true;
 
 const pct = (n,dp=2) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
 const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+const nameOf = k => (D.meta[k]&&D.meta[k].name)||k;
 
 async function load(){
   try{
@@ -694,43 +719,98 @@ async function load(){
     $("gSrc").textContent = "Couldn't load the index data (data/indices.json). If the site is new, run the workflow once from the Actions tab.";
     return;
   }
-  dates = D.dates; ts = dates.map(d=>Date.parse(d+"T00:00:00Z"));
-  const keys = Object.keys(D.series);
-  keys.forEach(k=>["gA","gB"].forEach(id=>{ const o=document.createElement("option"); o.value=k; o.textContent=(D.meta[k]&&D.meta[k].name)||k; $(id).appendChild(o); }));
-  $("gA").value = keys.includes("US100")?"US100":keys[0];
-  $("gB").value = keys.includes("US2000")?"US2000":keys[1]||keys[0];
+  dates = D.dates; ts = dates.map(d=>Date.parse(d+"T00:00:00Z")); keys = Object.keys(D.series);
+  keys.forEach(k=>["gA","gB"].forEach(id=>{ const o=document.createElement("option"); o.value=k; o.textContent=nameOf(k); $(id).appendChild(o); }));
   $("gQuick").value = "5y";
-  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B; if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick; $("gShowAB").checked=o.ab!==false; } }catch(e){}
+  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
+    if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B;
+    if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick;
+    $("gShowAB").checked=o.ab!==false; auto=o.auto!==false; showAll=o.all!==false; } }catch(e){}
+  setAllVisible(showAll);
   render();
 }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,auto,all:showAll})); }catch(e){} }
 
-function applyQuick(firstIdx){
+function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
+function applyQuick(minIdx, allIdx){
   const q=$("gQuick").value; if(!q) return;
-  const firstD=dates[firstIdx];
-  if(q==="all"){ $("gStart").value=firstD; return; }
+  const firstD=dates[minIdx];
+  if(q==="all"){ $("gStart").value=dates[allIdx]; return; }  // first date every index has data
   const last=new Date(dates[dates.length-1]+"T00:00:00"); let t=new Date(last);
   if(q==="ytd") t=new Date(last.getFullYear(),0,1);
   else { const n=parseInt(q,10); if(q.endsWith("m")) t.setMonth(t.getMonth()-n); else t.setFullYear(t.getFullYear()-n); }
   const want=iso(t);
   $("gStart").value = want<firstD ? firstD : (dates.find(d=>d>=want)||firstD);
 }
+// accumulated series for one index from index s0 (s0 = 0%), null if the index has no close at s0
+function accum(k, s0){
+  const v=D.series[k]; if(v[s0]==null) return null;
+  const out=new Array(dates.length-s0); let c=0; out[0]=0;
+  for(let i=s0+1;i<dates.length;i++){ c += (v[i]/v[i-1]-1)*100; out[i-s0]=c; }
+  return out;
+}
 
 function render(){
   if(!D) return;
-  const A=$("gA").value, B=$("gB").value, va=D.series[A], vb=D.series[B];
-  try{ localStorage.setItem(LK, JSON.stringify({A,B,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked})); }catch(e){}
-  $("gErr").textContent = A===B ? "Index A and B are the same, so the gap is always zero. Pick two different indices." : "";
-  // first date where both indices have a close
-  let first=-1; for(let i=0;i<dates.length;i++){ if(va[i]!=null && vb[i]!=null){ first=i; break; } }
-  if(first<0){ $("gErr").textContent="These two indices have no dates in common."; return; }
-  $("gStart").min=dates[first]; $("gStart").max=dates[dates.length-1];
-  applyQuick(first);
+  // start date: earliest allowed is the first date any index has data
+  const firsts=keys.map(firstIdx).filter(i=>i>=0);
+  const minIdx=Math.min(...firsts), allIdx=Math.max(...firsts);
+  $("gStart").min=dates[minIdx]; $("gStart").max=dates[dates.length-1];
+  applyQuick(minIdx, allIdx);
   let st=$("gStart").value;
-  if(!st || st<dates[first]) { st=dates[first]; $("gStart").value=st; }
+  if(!st || st<dates[minIdx]) { st=dates[allIdx]; $("gStart").value=st; }
   if(st>dates[dates.length-1]) { st=dates[dates.length-1]; $("gStart").value=st; }
-  let s0=dates.findIndex(d=>d>=st); if(s0<first) s0=first;
+  const s0=Math.max(minIdx, dates.findIndex(d=>d>=st));
 
-  // start date = 0; then add each day's % (holidays were filled with the previous close, so they add 0%)
+  // rank every index that has data on the start date
+  const acc={}, ranked=[], missing=[];
+  keys.forEach(k=>{ const a=accum(k,s0); if(a){ acc[k]=a; ranked.push([k,a[a.length-1]]); } else missing.push(k); });
+  ranked.sort((x,y)=>y[1]-x[1]);
+  const best=ranked[0], worst=ranked[ranked.length-1];
+  const showRank=(id,r)=>{ $(id).textContent = r ? `${r[0]} ${pct(r[1])}` : "—"; $(id).title = r ? nameOf(r[0]) : ""; $(id).className = r ? (r[1]>=0?"pos":"neg") : ""; };
+  showRank("gBest",best); showRank("gWorst",worst);
+  if(auto && ranked.length>=2){ $("gA").value=best[0]; $("gB").value=worst[0]; }
+  $("gAuto").disabled = auto && !!best && $("gA").value===best[0] && $("gB").value===worst[0];
+  save();
+
+  renderAll(acc, ranked, missing, s0);
+  renderPair(s0);
+}
+
+function renderAll(acc, ranked, missing, s0){
+  $("gAllTitle").textContent = `All indices: accumulated gain/loss since ${fmtD(dates[s0])}`;
+  $("gAllNote").textContent = "Click a name in the legend to hide or show that index. Legend is ordered best to worst." + (missing.length?` Not included (no data on the start date): ${missing.join(", ")}.`:"");
+  if(!showAll){ if(allChart){ allChart.destroy(); allChart=null; } return; }
+  const muted=cssVar("--muted"), line=cssVar("--line"), ink=cssVar("--ink");
+  const hidden = allChart ? Object.fromEntries(allChart.data.datasets.map((d,i)=>[d.key, !allChart.isDatasetVisible(i)])) : {};
+  const ds = ranked.map(([k,v])=>{ const ci=keys.indexOf(k)%PALETTE.length; return {
+    key:k, label:`${k} ${pct(v,1)}`, data:acc[k].map((y,j)=>({x:ts[s0+j],y})), parsing:false,
+    borderColor:PALETTE[ci], backgroundColor:PALETTE[ci], borderWidth:1.6, pointRadius:0, tension:0, fill:false, hidden:!!hidden[k] }; });
+  const opts = baseOpts(s0, muted, line, ink);
+  opts.plugins.legend = { display:true, position:"right", labels:{ color:muted, boxWidth:12, font:{size:11} } };
+  opts.interaction = { mode:"nearest", axis:"x", intersect:false };
+  opts.plugins.tooltip = { itemSort:(a,b)=>b.parsed.y-a.parsed.y, callbacks:{ title:it=>tipDate(it), label:it=>`${it.dataset.key}: ${pct(it.parsed.y)}` } };
+  if(window.innerWidth<700) opts.plugins.legend.position="bottom";
+  if(!window.Chart) return;
+  if(allChart){ allChart.data.datasets=ds; allChart.options=opts; allChart.update(); }
+  else allChart=new Chart($("gAllChart"),{type:"line",data:{datasets:ds},options:opts});
+}
+
+function baseOpts(s0, muted, line, ink){
+  const long=(ts[ts.length-1]-ts[s0])>3*365*864e5;
+  return { responsive:true, maintainAspectRatio:false, animation:false,
+    scales:{ x:{ type:"linear", min:ts[s0], max:ts[ts.length-1], ticks:{color:muted, maxTicksLimit:8, callback:v=>new Date(v).toLocaleDateString(undefined, long?{year:"numeric",timeZone:"UTC"}:{month:"short",year:"2-digit",timeZone:"UTC"})}, grid:{color:line} },
+             y:{ title:{display:true,text:"Accumulated gain/loss (%)",color:muted}, ticks:{color:muted,callback:v=>v+"%"}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} } },
+    plugins:{ decimation:{enabled:true, algorithm:"lttb", samples:900} } };
+}
+const tipDate = it => new Date(it[0].parsed.x).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"});
+
+function renderPair(sStart){
+  const A=$("gA").value, B=$("gB").value, va=D.series[A], vb=D.series[B];
+  $("gErr").textContent = A===B ? "Index A and B are the same, so the gap is always zero. Pick two different indices." : "";
+  let s0=sStart; while(s0<dates.length && (va[s0]==null || vb[s0]==null)) s0++;
+  if(s0>=dates.length){ $("gErr").textContent="These two indices have no dates in common."; return; }
+  if(s0>sStart && A!==B) $("gErr").textContent=`${va[sStart]==null?A:B} has no data on the start date, so this pair starts on ${fmtD(dates[s0])}.`;
   const pA=[], pB=[], pG=[]; let ca=0, cb=0, iMax=s0, iMin=s0, gMax=0, gMin=0;
   for(let i=s0;i<dates.length;i++){
     if(i>s0){ ca += (va[i]/va[i-1]-1)*100; cb += (vb[i]/vb[i-1]-1)*100; }
@@ -745,34 +825,40 @@ function render(){
   $("gVN").textContent=String(dates.length-1-s0); $("gVN").className="";
   $("gTitle").textContent=`Accumulated ${A} − accumulated ${B}, ${fmtD(dates[s0])} to ${fmtD(dates[dates.length-1])}`;
   const mA=D.meta[A]||{}, mB=D.meta[B]||{};
-  const notes=[mA,mB].filter(m=>m.substitute).map(m=>m.substitute);
+  const notes=Object.values(D.meta).filter(m=>m.substitute).map(m=>m.substitute);
   const upd=new Date(D.generated).toLocaleString(undefined,{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
   $("gSrc").textContent = `Daily closes from Yahoo Finance (${mA.ticker||A}, ${mB.ticker||B}), updated ${upd}. Latest close: ${A} ${fmtD(mA.last||dates[dates.length-1])}, ${B} ${fmtD(mB.last||dates[dates.length-1])}. Weekdays with no close (holidays) carry the previous close forward and count as 0%.${notes.length?" Note: "+notes.join("; ")+".":""}${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")} (previous data kept).`:""}`;
 
-  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line"), c2=cssVar("--c2"), c1=cssVar("--c1");
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
+  const cA=PALETTE[keys.indexOf(A)%PALETTE.length], cB=PALETTE[keys.indexOf(B)%PALETTE.length];
   const ds=[{ label:`Gap ${A} − ${B}`, data:pG, parsing:false, borderWidth:2.2, pointRadius:0, tension:0, borderColor:green,
       segment:{ borderColor:c=>(c.p0.parsed.y+c.p1.parsed.y)/2>=0?green:red }, fill:{target:"origin", above:green+"22", below:red+"22"} }];
   if($("gShowAB").checked){
-    ds.push({ label:`Accumulated ${A}`, data:pA, parsing:false, borderColor:c2, borderWidth:1.4, pointRadius:0, borderDash:[5,4], fill:false });
-    ds.push({ label:`Accumulated ${B}`, data:pB, parsing:false, borderColor:c1, borderWidth:1.4, pointRadius:0, borderDash:[2,3], fill:false });
+    ds.push({ label:`Accumulated ${A}`, data:pA, parsing:false, borderColor:cA, borderWidth:1.4, pointRadius:0, borderDash:[5,4], fill:false });
+    ds.push({ label:`Accumulated ${B}`, data:pB, parsing:false, borderColor:cB, borderWidth:1.4, pointRadius:0, borderDash:[2,3], fill:false });
   }
-  const span=ts[ts.length-1]-ts[s0], long=span>3*365*864e5;
-  const opts={ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"nearest",axis:"x",intersect:false},
-    scales:{ x:{ type:"linear", min:ts[s0], max:ts[ts.length-1], ticks:{color:muted, maxTicksLimit:8, callback:v=>new Date(v).toLocaleDateString(undefined, long?{year:"numeric"}:{month:"short",year:"2-digit"})}, grid:{color:line} },
-             y:{ title:{display:true,text:"Accumulated gain/loss (%)",color:muted}, ticks:{color:muted,callback:v=>v+"%"}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} } },
-    plugins:{ decimation:{enabled:true, algorithm:"lttb", samples:900},
-      legend:{ display:$("gShowAB").checked, labels:{color:muted, boxWidth:18} },
-      tooltip:{ callbacks:{ title:it=>new Date(it[0].parsed.x).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"}), label:it=>`${it.dataset.label}: ${pct(it.parsed.y)}` } } } };
-  if(window.Chart){
-    if(chart){ chart.data.datasets=ds; chart.options=opts; chart.update(); }
-    else chart=new Chart($("gChart"),{type:"line",data:{datasets:ds},options:opts});
-  }
+  const opts=baseOpts(s0, muted, line, ink);
+  opts.interaction={mode:"nearest",axis:"x",intersect:false};
+  opts.plugins.legend={ display:$("gShowAB").checked, labels:{color:muted, boxWidth:18} };
+  opts.plugins.tooltip={ callbacks:{ title:tipDate, label:it=>`${it.dataset.label}: ${pct(it.parsed.y)}` } };
+  if(!window.Chart) return;
+  if(chart){ chart.data.datasets=ds; chart.options=opts; chart.update(); }
+  else chart=new Chart($("gChart"),{type:"line",data:{datasets:ds},options:opts});
 }
 
-["gA","gB","gShowAB","gQuick"].forEach(id=>$(id).addEventListener("change",render));
+function setAllVisible(v){
+  showAll=v; $("gAllBody").hidden=!v;
+  $("gAllToggle").textContent = v ? "Hide chart" : "Show chart";
+  $("gAllToggle").setAttribute("aria-expanded", String(v));
+}
+$("gAllToggle").addEventListener("click",()=>{ setAllVisible(!showAll); save(); render(); });
+["gA","gB"].forEach(id=>$(id).addEventListener("change",()=>{ auto=false; render(); }));
+$("gAuto").addEventListener("click",()=>{ auto=true; render(); });
+$("gShowAB").addEventListener("change",render);
+$("gQuick").addEventListener("change",render);
 $("gStart").addEventListener("change",()=>{ $("gQuick").value=""; render(); });
-document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} requestAnimationFrame(render); }));
-const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} render(); });
+document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} requestAnimationFrame(render); }));
+const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} render(); });
 load();
 })();
 </script>

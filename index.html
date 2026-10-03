@@ -176,6 +176,11 @@ button{font:inherit;cursor:pointer}
 .hours-svg{display:block;width:100%;min-width:620px;height:auto}
 .hours-svg .gt{font:600 13px "Familjen Grotesk","Public Sans",system-ui,sans-serif;fill:var(--ink)}
 .hours-svg .gs{font:400 11.5px "Public Sans",system-ui,sans-serif;fill:var(--muted)}
+.grp-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.grp-lbl{font-size:.8rem;color:var(--muted);margin-right:2px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font:600 .82rem "Public Sans",system-ui,sans-serif}
+.chip[aria-pressed="true"]{background:var(--green-soft);color:var(--green);border-color:var(--green)}
+.chip:hover{border-color:var(--green)}
 [hidden]{display:none!important}
 @media (max-width:520px){
   .totals b{font-size:1.1rem}
@@ -339,7 +344,13 @@ button{font:inherit;cursor:pointer}
     <section class="panel">
       <div class="txhead">
         <h3 id="gAllTitle">All indices: accumulated gain/loss</h3>
-        <button class="ghost" id="gAllToggle" type="button" aria-expanded="true" aria-controls="gAllBody">Hide chart</button>
+        <div class="grp-btns">
+          <span class="grp-lbl">Show:</span>
+          <button class="chip" type="button" data-grp="US" aria-pressed="true">US (4)</button>
+          <button class="chip" type="button" data-grp="EU" aria-pressed="true">EU (5)</button>
+          <button class="chip" type="button" data-grp="OT" aria-pressed="true">Others (4)</button>
+          <button class="ghost" id="gAllToggle" type="button" aria-expanded="true" aria-controls="gAllBody">Hide chart</button>
+        </div>
       </div>
       <div id="gAllBody">
         <div class="chart-box tall"><canvas id="gAllChart" role="img" aria-label="Accumulated gain/loss of every index by date"></canvas></div>
@@ -457,7 +468,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",
 "use strict";
 const $ = id => document.getElementById(id);
 const LK = "finmon-ladder-v1";
-const tf = v => Math.round(v).toLocaleString();                       // table amounts, no currency
+const tf = v => Math.round(v).toLocaleString("en-US");                       // table amounts, no currency
 const ts = v => (v>0.5?"+":v<-0.5?"−":"") + tf(Math.abs(v));
 let pinMax = true;
 let lAuto = true; // s follows 100 − d until the user types their own value // slider starts at full scale and stays there until moved
@@ -466,13 +477,13 @@ let chart = null;
 
 function fmt(n, dp){
   const cur = $("currency").value || "SGD";
-  try{ return new Intl.NumberFormat(undefined,{style:"currency",currency:cur,maximumFractionDigits:dp??0,minimumFractionDigits:dp??0}).format(n); }
+  try{ return new Intl.NumberFormat("en-US",{style:"currency",currency:cur,maximumFractionDigits:dp??0,minimumFractionDigits:dp??0}).format(n); }
   catch(e){ return cur+" "+(+n).toFixed(dp??0); }
 }
 const sgn = n => (n>0?"+":n<0?"−":"") + fmt(Math.abs(n));
 const pct = (n,dp=1) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
 const num = v => { const x=parseFloat(v); return isFinite(x)?x:NaN; };
-function price(v){ return v>=100 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v.toLocaleString(undefined,{maximumSignificantDigits:5}); }
+function price(v){ return v>=100 ? v.toLocaleString("en-US",{maximumFractionDigits:2}) : v.toLocaleString("en-US",{maximumSignificantDigits:5}); }
 
 function read(){
   const d0=num($("lD").value);
@@ -580,7 +591,7 @@ function render(){
   // Remaining margin (equity) of a tranche at price P: margin + unrealized P&L; 0 once liquidated
   // Margin value at price P: the invested amount moves with the price (invested × P / buy price); 0 once liquidated
   const eq = (t,P) => (p.liq && p.L>1 && P <= t.liqPx + 1e-12) ? 0 : t.margin * P / t.px;
-  const unitsFmt = u => u.toLocaleString(undefined,{maximumSignificantDigits:5});
+  const unitsFmt = u => u.toLocaleString("en-US",{maximumSignificantDigits:5});
   tr.forEach((t,i)=>{
     // Holdings right after this buy: this tranche plus earlier ones not yet liquidated at this price
     const held = tr.slice(0,i+1).filter(j => !(p.liq && p.L>1 && j.k<t.k && t.px <= j.liqPx + 1e-12));
@@ -635,21 +646,21 @@ render();
 "use strict";
 const $ = id => document.getElementById(id);
 const LK = "finmon-short-ladder-v1";
-const tf = v => Math.round(v).toLocaleString();                       // table amounts, no currency
+const tf = v => Math.round(v).toLocaleString("en-US");                       // table amounts, no currency
 const ts = v => (v>0.5?"+":v<-0.5?"−":"") + tf(Math.abs(v));
 let sAuto = true; // s follows 100 + d until the user types their own value
 const ids = ["sSp","sD","sI","sM","sL","sMax","sP0","sMode","sRange","sLiq"];
 let chart = null;
 function fmt(n){
   const cur = $("currency").value || "SGD";
-  try{ return new Intl.NumberFormat(undefined,{style:"currency",currency:cur,maximumFractionDigits:0}).format(n); }
+  try{ return new Intl.NumberFormat("en-US",{style:"currency",currency:cur,maximumFractionDigits:0}).format(n); }
   catch(e){ return cur+" "+(+n).toFixed(0); }
 }
 const sgn = n => (n>0?"+":n<0?"−":"") + fmt(Math.abs(n));
 const pct = (n,dp=1) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
 const num = v => { const x=parseFloat(v); return isFinite(x)?x:NaN; };
-const price = v => v>=100 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v.toLocaleString(undefined,{maximumSignificantDigits:5});
-const unitsFmt = u => u.toLocaleString(undefined,{maximumSignificantDigits:5});
+const price = v => v>=100 ? v.toLocaleString("en-US",{maximumFractionDigits:2}) : v.toLocaleString("en-US",{maximumSignificantDigits:5});
+const unitsFmt = u => u.toLocaleString("en-US",{maximumSignificantDigits:5});
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 function read(){
@@ -798,11 +809,12 @@ const DASHES = [[], [7,4], [2,3], [10,3,2,3]];                    // solid, dash
 const SHAPES = ["circle","triangle","rect","rectRot","crossRot","star","rectRounded"];
 const PALETTE = ["#2F6B4F","#B8892B","#3E6C8F","#8E5B8C","#B9653A","#6E9A78","#A44A4A","#5B6FB5","#C2A13A","#2E8C8C","#9C6B3E","#7A4FA0","#5F7F2E"];
 let D = null, chart = null, allChart = null, dates = [], ts = [], keys = [];
-let auto = true, showAll = true;
+let auto = true, showAll = true, hiddenKeys = new Set();
+const GROUPS = { US:["US30","US100","US500","US2000"], EU:["UK100","GER40","FRA40","ITA40","ESP35"], OT:["AUS200","CAN60","HK50","JPN225"] };
 
 const pct = (n,dp=2) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
 const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
 const nameOf = k => (D.meta[k]&&D.meta[k].name)||k;
 
@@ -821,11 +833,12 @@ async function load(){
   try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
     if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B;
     if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick;
-    $("gShowAB").checked=o.ab!==false; auto=o.auto!==false; showAll=o.all!==false; } }catch(e){}
+    $("gShowAB").checked=o.ab!==false; auto=o.auto!==false; showAll=o.all!==false; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
   setAllVisible(showAll);
+  syncGroupBtns();
   render();
 }
-function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,auto,all:showAll})); }catch(e){} }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,auto,all:showAll,hid:[...hiddenKeys]})); }catch(e){} }
 
 function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
 function applyQuick(minIdx, allIdx){
@@ -875,13 +888,12 @@ function render(){
 
 function renderAll(acc, ranked, missing, s0){
   $("gAllTitle").textContent = `All indices: accumulated gain/loss since ${fmtD(dates[s0])}`;
-  $("gAllNote").textContent = "Each index has its own colour, line style and marker. Hover a name in the legend to highlight it, click to hide or show it. Legend is ordered best to worst." + (missing.length?` Not included (no data on the start date): ${missing.join(", ")}.`:"");
+  $("gAllNote").textContent = "Each index has its own colour, line style and marker. Use the US, EU and Others buttons to show or hide a group; hover a name in the legend to highlight it, click it to hide or show that index. Legend is ordered best to worst." + (missing.length?` Not included (no data on the start date): ${missing.join(", ")}.`:"");
   if(!showAll){ if(allChart){ allChart.destroy(); allChart=null; } return; }
   const muted=cssVar("--muted"), line=cssVar("--line"), ink=cssVar("--ink");
-  const hidden = allChart ? Object.fromEntries(allChart.data.datasets.map((d,i)=>[d.key, !allChart.isDatasetVisible(i)])) : {};
   const ds = ranked.map(([k,v])=>{ const ci=keys.indexOf(k), col=PALETTE[ci%PALETTE.length]; return {
     key:k, label:`${k} ${pct(v,1)}`, data:acc[k].map((y,j)=>({x:ts[s0+j],y})), parsing:false,
-    borderColor:col, backgroundColor:col, borderWidth:1.6, borderDash:DASHES[ci%DASHES.length], tension:0, fill:false, hidden:!!hidden[k],
+    borderColor:col, backgroundColor:col, borderWidth:1.6, borderDash:DASHES[ci%DASHES.length], tension:0, fill:false, hidden:hiddenKeys.has(k),
     // a marker every ~1/12 of the line, staggered per index so markers don't stack on the same date
     pointStyle:SHAPES[ci%SHAPES.length], pointHoverRadius:5, pointBorderWidth:1.2, pointBackgroundColor:"transparent",
     pointRadius:c=>{ const n=c.dataset.data.length, step=Math.max(1,Math.ceil(n/12)); return (c.dataIndex+ci*Math.ceil(step/13))%step===0?4:0; } }; });
@@ -890,6 +902,7 @@ function renderAll(acc, ranked, missing, s0){
     labels:{ color:muted, usePointStyle:true, boxHeight:8, font:{size:11} },
     // hovering a legend name fades the other lines
     onHover:(e,item,leg)=>{ const ch=leg.chart; ch.data.datasets.forEach((d,i)=>{ const base=PALETTE[keys.indexOf(d.key)%PALETTE.length]; const on=i===item.datasetIndex; d.borderColor=on?base:base+"33"; d.borderWidth=on?2.8:1.2; }); ch.update("none"); },
+    onClick:(e,item,leg)=>{ const ch=leg.chart, d=ch.data.datasets[item.datasetIndex]; if(hiddenKeys.has(d.key)) hiddenKeys.delete(d.key); else hiddenKeys.add(d.key); d.hidden=hiddenKeys.has(d.key); ch.update("none"); syncGroupBtns(); save(); },
     onLeave:(e,item,leg)=>{ const ch=leg.chart; ch.data.datasets.forEach(d=>{ d.borderColor=PALETTE[keys.indexOf(d.key)%PALETTE.length]; d.borderWidth=1.6; }); ch.update("none"); } };
   opts.interaction = { mode:"nearest", axis:"x", intersect:false };
   opts.plugins.tooltip = { itemSort:(a,b)=>b.parsed.y-a.parsed.y, callbacks:{ title:it=>tipDate(it), label:it=>`${it.dataset.key}: ${pct(it.parsed.y)}` } };
@@ -902,11 +915,13 @@ function renderAll(acc, ranked, missing, s0){
 function baseOpts(s0, muted, line, ink){
   const long=(ts[ts.length-1]-ts[s0])>3*365*864e5;
   return { responsive:true, maintainAspectRatio:false, animation:false,
-    scales:{ x:{ type:"linear", min:ts[s0], max:ts[ts.length-1], ticks:{color:muted, maxTicksLimit:8, callback:v=>new Date(v).toLocaleDateString(undefined, long?{year:"numeric",timeZone:"UTC"}:{month:"short",year:"2-digit",timeZone:"UTC"})}, grid:{color:line} },
+    scales:{ x:{ type:"linear", min:ts[s0], max:ts[ts.length-1],
+      afterBuildTicks: long ? (ax=>{ const t=[]; const y0=new Date(ax.min).getUTCFullYear(), y1=new Date(ax.max).getUTCFullYear(); const step=Math.max(1,Math.ceil((y1-y0+1)/10)); for(let y=y0;y<=y1;y+=step){ const v=Date.UTC(y,0,1); if(v>=ax.min&&v<=ax.max) t.push({value:v}); } if(t.length>=2) ax.ticks=t; }) : undefined,
+      ticks:{color:muted, maxTicksLimit:8, callback:v=>new Date(v).toLocaleDateString("en-US", long?{year:"numeric",timeZone:"UTC"}:{month:"short",year:"2-digit",timeZone:"UTC"})}, grid:{color:line} },
              y:{ title:{display:true,text:"Accumulated gain/loss (%)",color:muted}, ticks:{color:muted,callback:v=>v+"%"}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} } },
     plugins:{ decimation:{enabled:true, algorithm:"lttb", samples:900} } };
 }
-const tipDate = it => new Date(it[0].parsed.x).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"});
+const tipDate = it => new Date(it[0].parsed.x).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"});
 
 function renderPair(sStart){
   const A=$("gA").value, B=$("gB").value, va=D.series[A], vb=D.series[B];
@@ -930,7 +945,7 @@ function renderPair(sStart){
   set("gVMax",gMax); $("gVMax").title=fmtD(dates[iMax]);
   set("gVMin",gMin); $("gVMin").title=fmtD(dates[iMin]);
   $("gVN").textContent=String(dates.length-1-s0); $("gVN").className="";
-  const gLast=pG[pG.length-1].y, ddCur=peak-gLast, sd=d=>new Date(d+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const gLast=pG[pG.length-1].y, ddCur=peak-gLast, sd=d=>new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
   const sub=t=>`<span class="sub">${t}</span>`;
   $("gVDD").innerHTML = ddMax.toFixed(2)+"%"+sub(ddMax>0?`${sd(dates[ddPeakI])} → ${sd(dates[ddBotI])}`:"no drawdown");
   $("gVDD").className = ddMax>0?"neg":""; $("gVDD").title = ddMax>0?`Peak ${fmtD(dates[ddPeakI])} → bottom ${fmtD(dates[ddBotI])}`:"";
@@ -940,7 +955,7 @@ function renderPair(sStart){
   $("gTitle").textContent=`Accumulated ${A} − accumulated ${B}, ${fmtD(dates[s0])} to ${fmtD(dates[dates.length-1])}`;
   const mA=D.meta[A]||{}, mB=D.meta[B]||{};
   const notes=Object.values(D.meta).filter(m=>m.substitute).map(m=>m.substitute);
-  const upd=new Date(D.generated).toLocaleString(undefined,{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  const upd=new Date(D.generated).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
   $("gSrc").textContent = `Daily closes from Yahoo Finance (${mA.ticker||A}, ${mB.ticker||B}), updated ${upd}. Latest close: ${A} ${fmtD(mA.last||dates[dates.length-1])}, ${B} ${fmtD(mB.last||dates[dates.length-1])}. Weekdays with no close (holidays) carry the previous close forward and count as 0%.${notes.length?" Note: "+notes.join("; ")+".":""}${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")} (previous data kept).`:""}`;
 
   const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
@@ -965,6 +980,15 @@ function setAllVisible(v){
   $("gAllToggle").textContent = v ? "Hide chart" : "Show chart";
   $("gAllToggle").setAttribute("aria-expanded", String(v));
 }
+function syncGroupBtns(){
+  document.querySelectorAll(".chip[data-grp]").forEach(b=>{ const ks=GROUPS[b.dataset.grp].filter(k=>keys.includes(k)); b.setAttribute("aria-pressed", String(ks.length>0 && ks.every(k=>!hiddenKeys.has(k)))); });
+}
+document.querySelectorAll(".chip[data-grp]").forEach(b=>b.addEventListener("click",()=>{
+  const ks=GROUPS[b.dataset.grp], allOn=ks.every(k=>!hiddenKeys.has(k));
+  ks.forEach(k=> allOn ? hiddenKeys.add(k) : hiddenKeys.delete(k));
+  if(allChart){ allChart.data.datasets.forEach(d=>{ d.hidden=hiddenKeys.has(d.key); }); allChart.update("none"); }
+  syncGroupBtns(); save();
+}));
 $("gAllToggle").addEventListener("click",()=>{ setAllVisible(!showAll); save(); render(); });
 ["gA","gB"].forEach(id=>$(id).addEventListener("change",()=>{ auto=false; render(); }));
 $("gAuto").addEventListener("click",()=>{ auto=true; render(); });

@@ -166,6 +166,10 @@ button{font:inherit;cursor:pointer}
 .chart-box.tall{height:420px}
 @media (max-width:700px){.chart-box.tall{height:460px}}
 .ghost:disabled{opacity:.5;cursor:default}
+.hours-wrap{overflow-x:auto}
+.hours-svg{display:block;width:100%;min-width:620px;height:auto}
+.hours-svg .gt{font:600 13px "Familjen Grotesk","Public Sans",system-ui,sans-serif;fill:var(--ink)}
+.hours-svg .gs{font:400 11.5px "Public Sans",system-ui,sans-serif;fill:var(--muted)}
 [hidden]{display:none!important}
 @media (max-width:520px){
   .totals b{font-size:1.1rem}
@@ -338,6 +342,87 @@ button{font:inherit;cursor:pointer}
       <h3 id="gTitle">Accumulated gain/loss gap by date</h3>
       <div class="chart-box"><canvas id="gChart" role="img" aria-label="Accumulated gain/loss gap between the two indices by date"></canvas></div>
       <p class="hint lad-note" id="gSrc">Loading data…</p>
+    </section>
+
+    <section class="panel">
+      <div class="txhead">
+        <h3>Market hours in Singapore time</h3>
+        <button class="ghost" id="hoursToggle" type="button" aria-expanded="false" aria-controls="hoursBody">Show chart</button>
+      </div>
+      <div id="hoursBody" hidden>
+        <div class="hours-wrap"><svg class="hours-svg" viewBox="0 0 680 515" role="img" aria-label="Trading sessions of the 13 index markets in Singapore time">
+<defs><pattern id="gHA" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#EF9F27" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#EF9F27" stroke-width="1.6"/></pattern><pattern id="gHB" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#378ADD" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#378ADD" stroke-width="1.6"/></pattern><pattern id="gHG" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#888780" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#888780" stroke-width="1.6"/></pattern></defs>
+<g stroke="var(--line)" stroke-width="0.6"><line x1="210.00" y1="70" x2="210.00" y2="412" stroke-opacity="0.45"/><line x1="224.83" y1="70" x2="224.83" y2="412" stroke-opacity="0.45"/><line x1="239.66" y1="70" x2="239.66" y2="412" stroke-opacity="1"/><line x1="254.48" y1="70" x2="254.48" y2="412" stroke-opacity="0.45"/><line x1="269.31" y1="70" x2="269.31" y2="412" stroke-opacity="0.45"/><line x1="284.14" y1="70" x2="284.14" y2="412" stroke-opacity="1"/><line x1="298.97" y1="70" x2="298.97" y2="412" stroke-opacity="0.45"/><line x1="313.79" y1="70" x2="313.79" y2="412" stroke-opacity="0.45"/><line x1="328.62" y1="70" x2="328.62" y2="412" stroke-opacity="1"/><line x1="343.45" y1="70" x2="343.45" y2="412" stroke-opacity="0.45"/><line x1="358.28" y1="70" x2="358.28" y2="412" stroke-opacity="0.45"/><line x1="373.10" y1="70" x2="373.10" y2="412" stroke-opacity="1"/><line x1="387.93" y1="70" x2="387.93" y2="412" stroke-opacity="0.45"/><line x1="402.76" y1="70" x2="402.76" y2="412" stroke-opacity="0.45"/><line x1="417.59" y1="70" x2="417.59" y2="412" stroke-opacity="1"/><line x1="432.41" y1="70" x2="432.41" y2="412" stroke-opacity="0.45"/><line x1="447.24" y1="70" x2="447.24" y2="412" stroke-opacity="0.45"/><line x1="462.07" y1="70" x2="462.07" y2="412" stroke-opacity="1"/><line x1="476.90" y1="70" x2="476.90" y2="412" stroke-opacity="0.45"/><line x1="491.72" y1="70" x2="491.72" y2="412" stroke-opacity="0.45"/><line x1="506.55" y1="70" x2="506.55" y2="412" stroke-opacity="1"/><line x1="521.38" y1="70" x2="521.38" y2="412" stroke-opacity="0.45"/><line x1="536.21" y1="70" x2="536.21" y2="412" stroke-opacity="0.45"/><line x1="551.03" y1="70" x2="551.03" y2="412" stroke-opacity="1"/><line x1="565.86" y1="70" x2="565.86" y2="412" stroke-opacity="0.45"/><line x1="580.69" y1="70" x2="580.69" y2="412" stroke-opacity="0.45"/><line x1="595.52" y1="70" x2="595.52" y2="412" stroke-opacity="1"/><line x1="610.34" y1="70" x2="610.34" y2="412" stroke-opacity="0.45"/><line x1="625.17" y1="70" x2="625.17" y2="412" stroke-opacity="0.45"/><line x1="640.00" y1="70" x2="640.00" y2="412" stroke-opacity="1"/></g>
+<g stroke="var(--line)" stroke-width="0.6"><line x1="40" y1="124" x2="640" y2="124"/><line x1="40" y1="172" x2="640" y2="172"/><line x1="40" y1="220" x2="640" y2="220"/><line x1="40" y1="268" x2="640" y2="268"/><line x1="40" y1="316" x2="640" y2="316"/><line x1="40" y1="364" x2="640" y2="364"/></g>
+<text class="gs" x="239.66" y="40" text-anchor="middle">06:00</text><text class="gs" x="284.14" y="40" text-anchor="middle">09:00</text><text class="gs" x="328.62" y="40" text-anchor="middle">12:00</text><text class="gs" x="373.10" y="40" text-anchor="middle">15:00</text><text class="gs" x="417.59" y="40" text-anchor="middle">18:00</text><text class="gs" x="462.07" y="40" text-anchor="middle">21:00</text><text class="gs" x="506.55" y="40" text-anchor="middle">00:00</text><text class="gs" x="551.03" y="40" text-anchor="middle">03:00</text><text class="gs" x="595.52" y="40" text-anchor="middle">06:00</text><text class="gs" x="640.00" y="40" text-anchor="middle">09:00</text>
+<text class="gs" x="573" y="58" text-anchor="middle">next day</text>
+<text class="gt" x="40" y="93" dominant-baseline="central">AUS200</text><text class="gs" x="40" y="110" dominant-baseline="central">Sydney</text>
+<rect x="224.83" y="88" width="44.48" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Pre-open, order entry only (07:00–10:00 AEST): 05:00–08:00 SGT</title></rect>
+<rect x="358.28" y="88" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Closing auction: 14:00–14:10 SGT</title></rect>
+<rect x="269.31" y="88" width="88.97" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (AEST): 08:00–14:00 SGT</title></rect>
+<rect x="210.00" y="102" width="44.48" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Pre-open, order entry only (07:00–10:00 AEDT): 04:00–07:00 SGT</title></rect>
+<rect x="343.45" y="102" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Closing auction: 13:00–13:10 SGT</title></rect>
+<rect x="254.48" y="102" width="88.97" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (AEDT): 07:00–13:00 SGT</title></rect>
+<text class="gt" x="40" y="141" dominant-baseline="central">JPN225</text><text class="gs" x="40" y="158" dominant-baseline="central">Tokyo</text>
+<rect x="259.43" y="136" width="121.09" height="12" fill="url(#gHA)"><title>Northern summer — Japannext PTS day session (08:20–16:30 JST): 07:20–15:30 SGT</title></rect>
+<rect x="387.93" y="136" width="192.76" height="12" fill="url(#gHA)"><title>Northern summer — Japannext PTS night session (17:00–06:00 JST): 16:00–05:00 SGT</title></rect>
+<rect x="254.48" y="136" width="14.83" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — TSE pre-opening, order entry only: 07:00–08:00 SGT</title></rect>
+<rect x="269.31" y="136" width="37.07" height="12" rx="2" fill="#EF9F27"><title>Northern summer — TSE regular, morning: 08:00–10:30 SGT</title></rect>
+<rect x="321.21" y="136" width="44.48" height="12" rx="2" fill="#EF9F27"><title>Northern summer — TSE regular, afternoon: 11:30–14:30 SGT</title></rect>
+<rect x="259.43" y="150" width="121.09" height="12" fill="url(#gHB)"><title>Northern winter — Japannext PTS day session (08:20–16:30 JST): 07:20–15:30 SGT</title></rect>
+<rect x="387.93" y="150" width="192.76" height="12" fill="url(#gHB)"><title>Northern winter — Japannext PTS night session (17:00–06:00 JST): 16:00–05:00 SGT</title></rect>
+<rect x="254.48" y="150" width="14.83" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — TSE pre-opening, order entry only: 07:00–08:00 SGT</title></rect>
+<rect x="269.31" y="150" width="37.07" height="12" rx="2" fill="#378ADD"><title>Northern winter — TSE regular, morning: 08:00–10:30 SGT</title></rect>
+<rect x="321.21" y="150" width="44.48" height="12" rx="2" fill="#378ADD"><title>Northern winter — TSE regular, afternoon: 11:30–14:30 SGT</title></rect>
+<text class="gt" x="40" y="189" dominant-baseline="central">HK50</text><text class="gs" x="40" y="206" dominant-baseline="central">Hong Kong</text>
+<rect x="284.14" y="184" width="7.41" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Pre-opening auction: 09:00–09:30 SGT</title></rect>
+<rect x="387.93" y="184" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Closing auction: 16:00–16:10 SGT</title></rect>
+<rect x="291.55" y="184" width="37.07" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular, morning: 09:30–12:00 SGT</title></rect>
+<rect x="343.45" y="184" width="44.48" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular, afternoon: 13:00–16:00 SGT</title></rect>
+<rect x="284.14" y="198" width="7.41" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Pre-opening auction: 09:00–09:30 SGT</title></rect>
+<rect x="387.93" y="198" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Closing auction: 16:00–16:10 SGT</title></rect>
+<rect x="291.55" y="198" width="37.07" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular, morning: 09:30–12:00 SGT</title></rect>
+<rect x="343.45" y="198" width="44.48" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular, afternoon: 13:00–16:00 SGT</title></rect>
+<text class="gt" x="40" y="237" dominant-baseline="central">GER40</text><text class="gs" x="40" y="254" dominant-baseline="central">Frankfurt</text>
+<rect x="350.86" y="232" width="229.83" height="12" fill="url(#gHA)"><title>Northern summer — gettex (07:30–23:00 CEST): 13:30–05:00 SGT</title></rect>
+<rect x="370.63" y="232" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Xetra opening auction: 14:50–15:00 SGT</title></rect>
+<rect x="499.14" y="232" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Xetra closing auction: 23:30–23:35 SGT</title></rect>
+<rect x="373.10" y="232" width="126.03" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Xetra regular (CEST): 15:00–23:30 SGT</title></rect>
+<rect x="365.69" y="246" width="229.83" height="12" fill="url(#gHB)"><title>Northern winter — gettex (07:30–23:00 CET): 14:30–06:00 SGT</title></rect>
+<rect x="385.46" y="246" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Xetra opening auction: 15:50–16:00 SGT</title></rect>
+<rect x="513.97" y="246" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Xetra closing auction: 00:30–00:35 SGT</title></rect>
+<rect x="387.93" y="246" width="126.03" height="12" rx="2" fill="#378ADD"><title>Northern winter — Xetra regular (CET): 16:00–00:30 SGT</title></rect>
+<text class="gt" x="40" y="279" dominant-baseline="central">Europe and UK</text><text class="gs" x="40" y="294" dominant-baseline="central">UK100 · FRA40</text><text class="gs" x="40" y="308" dominant-baseline="central">ITA40 · ESP35</text>
+<rect x="370.63" y="280" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Opening auctions: 14:50–15:00 SGT</title></rect>
+<rect x="499.14" y="280" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Closing auctions: 23:30–23:35 SGT</title></rect>
+<rect x="373.10" y="280" width="126.03" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (BST/CEST): 15:00–23:30 SGT</title></rect>
+<rect x="385.46" y="294" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Opening auctions: 15:50–16:00 SGT</title></rect>
+<rect x="513.97" y="294" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Closing auctions: 00:30–00:35 SGT</title></rect>
+<rect x="387.93" y="294" width="126.03" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (GMT/CET): 16:00–00:30 SGT</title></rect>
+<text class="gt" x="40" y="327" dominant-baseline="central">US</text><text class="gs" x="40" y="342" dominant-baseline="central">US30 · US100</text><text class="gs" x="40" y="356" dominant-baseline="central">US500 · US2000</text>
+<rect x="469.48" y="328" width="96.38" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (EDT): 21:30–04:00 SGT</title></rect>
+<rect x="387.93" y="328" width="81.55" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — Pre-market (04:00–09:30 EDT): 16:00–21:30 SGT</title></rect>
+<rect x="565.86" y="328" width="59.31" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — After-hours (16:00–20:00 EDT): 04:00–08:00 SGT</title></rect>
+<rect x="484.31" y="342" width="96.38" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (EST): 22:30–05:00 SGT</title></rect>
+<rect x="402.76" y="342" width="81.55" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — Pre-market (04:00–09:30 EST): 17:00–22:30 SGT</title></rect>
+<rect x="580.69" y="342" width="59.31" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — After-hours (16:00–20:00 EST): 05:00–09:00 SGT</title></rect>
+<text class="gt" x="40" y="381" dominant-baseline="central">CAN60</text><text class="gs" x="40" y="398" dominant-baseline="central">Toronto</text>
+<rect x="432.41" y="376" width="37.07" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Pre-open, order entry only (07:00–09:30 EDT): 19:00–21:30 SGT</title></rect>
+<rect x="469.48" y="376" width="96.38" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (EDT): 21:30–04:00 SGT</title></rect>
+<rect x="569.57" y="376" width="11.12" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — Extended session (16:15–17:00 EDT): 04:15–05:00 SGT</title></rect>
+<rect x="447.24" y="390" width="37.07" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Pre-open, order entry only (07:00–09:30 EST): 20:00–22:30 SGT</title></rect>
+<rect x="484.31" y="390" width="96.38" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (EST): 22:30–05:00 SGT</title></rect>
+<rect x="584.40" y="390" width="11.12" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — Extended session (16:15–17:00 EST): 05:15–06:00 SGT</title></rect>
+<line x1="584.40" y1="70" x2="584.40" y2="412" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="40" y="432" width="16" height="10" rx="2" fill="#EF9F27"/><text class="gs" x="64" y="437" dominant-baseline="central">Regular, northern summer (top bar)</text>
+<rect x="360" y="432" width="16" height="10" rx="2" fill="#378ADD"/><text class="gs" x="384" y="437" dominant-baseline="central">Regular, northern winter (bottom bar)</text>
+<rect x="40" y="456" width="16" height="10" rx="2" fill="#888780" fill-opacity="0.28" stroke="#888780" stroke-width="1" stroke-dasharray="3 2"/><text class="gs" x="64" y="461" dominant-baseline="central">Pre/post-market, same exchange</text>
+<rect x="360" y="456" width="16" height="10" fill="url(#gHG)"/><text class="gs" x="384" y="461" dominant-baseline="central">Other venues (Japannext, gettex)</text>
+<rect x="40" y="480" width="16" height="10" rx="2" fill="none" stroke="#888780" stroke-width="1.2"/><text class="gs" x="64" y="485" dominant-baseline="central">Order entry or auction, no trading</text>
+<line x1="360" y1="485" x2="376" y2="485" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 3"/><text class="gs" x="384" y="485" dominant-baseline="central">05:15 SGT data update</text>
+</svg></div>
+        <p class="hint lad-note">Hover a bar for exact times. Daily closes in the data are the official regular-session closes; pre/post-market, other venues and CFD trading don't change them. Northern summer is roughly late March to late October (US/Canada from the 2nd Sunday of March to the 1st Sunday of November); Australia's clocks move the opposite way.</p>
+      </div>
     </section>
   </main>
 
@@ -869,6 +954,15 @@ $("gStart").addEventListener("change",()=>{ $("gQuick").value=""; render(); });
 document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} requestAnimationFrame(render); }));
 const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} render(); });
 load();
+})();
+</script>
+<script>
+(function(){
+  const b=document.getElementById("hoursToggle"), body=document.getElementById("hoursBody"), K="finmon-hours-open";
+  const set=v=>{ body.hidden=!v; b.textContent=v?"Hide chart":"Show chart"; b.setAttribute("aria-expanded",String(v)); };
+  let open=false; try{ open=localStorage.getItem(K)==="1"; }catch(e){}
+  set(open);
+  b.addEventListener("click",()=>{ open=!open; set(open); try{ localStorage.setItem(K, open?"1":"0"); }catch(e){} });
 })();
 </script>
 </body>

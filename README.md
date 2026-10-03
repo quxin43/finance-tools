@@ -1,6 +1,6 @@
 # Finance tools with daily index data
 
-Three tabs: **Dip ladder**, **Rally ladder** and **Index gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **06:00 Singapore time** and republishes the site, so the Index gap tab is always current.
+Three tabs: **Dip ladder**, **Rally ladder** and **Index gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** and republishes the site, so the Index gap tab is always current.
 
 ## Index pool
 
@@ -26,7 +26,7 @@ Three tabs: **Dip ladder**, **Rally ladder** and **Index gap**. A GitHub workflo
 - **Calendar:** every weekday (Monday to Friday).
 - **Missing dates** (holidays, or a market that hasn't reported yet): filled with the previous date's close, so that day counts as 0% for that index.
 - **Failed download:** that index keeps its previous data, and the page shows a note.
-- **Timing:** 06:00 SGT is 22:00 UTC, after the US close (the last of these markets to close). GitHub sometimes starts scheduled jobs a few minutes to an hour late.
+- **Timing:** 05:15 SGT is 21:15 UTC. The US closes last: 04:00 SGT in northern summer, 05:00 SGT in winter. GitHub usually starts scheduled jobs a few minutes late. Each run re-downloads the full history, so if a close wasn't final yet, the next day's run corrects it.
 
 ## One-time setup (about 15 minutes)
 
@@ -39,7 +39,7 @@ Three tabs: **Dip ladder**, **Rally ladder** and **Index gap**. A GitHub workflo
 6. **Run it the first time:** go to the **Actions** tab, click **Update index data and publish site**, then **Run workflow**. It takes about 1 to 3 minutes and downloads the full history.
 7. **Open your site:** when the run shows a green tick, your page is at `https://<your-username>.github.io/finance-tools/`. Bookmark it.
 
-After that, it updates itself every day at 06:00 SGT. You don't need to do anything.
+After that, it updates itself every day at 05:15 SGT. You don't need to do anything.
 
 ## Good to know
 

@@ -2,7 +2,7 @@ name: Update index data and publish site
 
 on:
   schedule:
-    - cron: "0 22 * * *"   # every day at 22:00 UTC = 06:00 Singapore time
+    - cron: "15 21 * * *"  # every day at 21:15 UTC = 05:15 Singapore time
   workflow_dispatch:        # adds a "Run workflow" button for a manual update
   push:
     branches: [main]        # republish whenever you change the page

@@ -160,6 +160,12 @@ button{font:inherit;cursor:pointer}
 .lad-totals div{display:flex;flex-direction:column;justify-content:space-between;gap:4px}
 .lad-totals b,.lad-totals b.small{font-size:1rem;white-space:nowrap;margin-top:0;overflow:hidden;text-overflow:ellipsis}
 .lad-totals .plp{font-weight:500}
+.gap-totals{grid-template-columns:repeat(9,minmax(0,1fr))}
+.gap-totals .dd-first{border-left:1px solid var(--line);padding-left:10px}
+.gap-totals b:not(:has(.sub))::after{content:"\00a0";display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;margin-top:2px}
+.gap-totals b .sub{display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1000px){.gap-totals{grid-template-columns:repeat(5,minmax(0,1fr))}.gap-totals .dd-first{border-left:0;padding-left:0}}
+@media (max-width:640px){.gap-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .rank{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
 .rank b{font:600 1rem "Familjen Grotesk",sans-serif;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rank b.pos{color:var(--green)} .rank b.neg{color:var(--red)}
@@ -317,13 +323,16 @@ button{font:inherit;cursor:pointer}
         <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B on the gap chart</label>
       </div>
       <p class="err" id="gErr" role="alert"></p>
-      <div class="totals lad-totals">
+      <div class="totals lad-totals gap-totals">
         <div><span id="gLA">Accumulated A</span><b id="gVA">—</b></div>
         <div><span id="gLB">Accumulated B</span><b id="gVB">—</b></div>
         <div><span>Gap A − B<br>(last date)</span><b id="gVG">—</b></div>
         <div><span>Highest gap</span><b id="gVMax">—</b></div>
         <div><span>Lowest gap</span><b id="gVMin">—</b></div>
         <div><span>Days in range</span><b id="gVN">—</b></div>
+        <div class="dd-first"><span>Max drawdown<br>of A − B</span><b id="gVDD">—</b></div>
+        <div><span>Current drawdown<br>of A − B</span><b id="gVCD">—</b></div>
+        <div><span>Current ÷ max<br>drawdown</span><b id="gVR">—</b></div>
       </div>
     </section>
 
@@ -906,10 +915,14 @@ function renderPair(sStart){
   if(s0>=dates.length){ $("gErr").textContent="These two indices have no dates in common."; return; }
   if(s0>sStart && A!==B) $("gErr").textContent=`${va[sStart]==null?A:B} has no data on the start date, so this pair starts on ${fmtD(dates[s0])}.`;
   const pA=[], pB=[], pG=[]; let ca=0, cb=0, iMax=s0, iMin=s0, gMax=0, gMin=0;
+  // drawdown of the gap: running peak minus current value
+  let peak=0, iPeak=s0, ddMax=0, ddPeakI=s0, ddBotI=s0;
   for(let i=s0;i<dates.length;i++){
     if(i>s0){ ca += (va[i]/va[i-1]-1)*100; cb += (vb[i]/vb[i-1]-1)*100; }
     const g=ca-cb; pA.push({x:ts[i],y:ca}); pB.push({x:ts[i],y:cb}); pG.push({x:ts[i],y:g});
     if(g>gMax){gMax=g;iMax=i;} if(g<gMin){gMin=g;iMin=i;}
+    if(g>=peak){ peak=g; iPeak=i; }
+    else if(peak-g>ddMax){ ddMax=peak-g; ddPeakI=iPeak; ddBotI=i; }
   }
   const set=(id,v)=>{ $(id).textContent=pct(v); $(id).className=v>=0?"pos":"neg"; };
   $("gLA").textContent=`Accumulated ${A}`; $("gLB").textContent=`Accumulated ${B}`;
@@ -917,6 +930,13 @@ function renderPair(sStart){
   set("gVMax",gMax); $("gVMax").title=fmtD(dates[iMax]);
   set("gVMin",gMin); $("gVMin").title=fmtD(dates[iMin]);
   $("gVN").textContent=String(dates.length-1-s0); $("gVN").className="";
+  const gLast=pG[pG.length-1].y, ddCur=peak-gLast, sd=d=>new Date(d+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const sub=t=>`<span class="sub">${t}</span>`;
+  $("gVDD").innerHTML = ddMax.toFixed(2)+"%"+sub(ddMax>0?`${sd(dates[ddPeakI])} → ${sd(dates[ddBotI])}`:"no drawdown");
+  $("gVDD").className = ddMax>0?"neg":""; $("gVDD").title = ddMax>0?`Peak ${fmtD(dates[ddPeakI])} → bottom ${fmtD(dates[ddBotI])}`:"";
+  $("gVCD").innerHTML = ddCur.toFixed(2)+"%"+sub(`from ${sd(dates[iPeak])} peak`); $("gVCD").className=""; $("gVCD").title=`Last peak ${fmtD(dates[iPeak])}`;
+  const ratio = ddMax>0 ? ddCur/ddMax*100 : null;
+  $("gVR").innerHTML = (ratio==null?"—":Math.round(ratio)+"%")+sub(ratio==null?"no drawdown yet":ddCur<=1e-9?"at a new peak":"of max drawdown"); $("gVR").className="";
   $("gTitle").textContent=`Accumulated ${A} − accumulated ${B}, ${fmtD(dates[s0])} to ${fmtD(dates[dates.length-1])}`;
   const mA=D.meta[A]||{}, mB=D.meta[B]||{};
   const notes=Object.values(D.meta).filter(m=>m.substitute).map(m=>m.substitute);

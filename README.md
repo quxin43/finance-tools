@@ -1,6 +1,6 @@
 # Finance tools with daily index data
 
-Three tabs: **Dip ladder**, **Rally ladder** and **Index gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** and republishes the site, so the Index gap tab is always current.
+Four tabs: **Dip ladder**, **Rally ladder**, **Index gap** and **Energy gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
 
 ## Index pool
 
@@ -20,13 +20,25 @@ Three tabs: **Dip ladder**, **Rally ladder** and **Index gap**. A GitHub workflo
 | US500 | US SPX 500 (S&P 500) | ^GSPC |
 | US2000 | US Small Cap 2000 (Russell 2000) | ^RUT |
 
+## Energy futures (Energy gap tab)
+
+| Key | Market | Yahoo ticker | Native unit | Saved as USD/bbl |
+|---|---|---|---|---|
+| BRENT | Brent crude | BZ=F | USD/bbl | as is |
+| WTI | WTI crude (Texas) | CL=F | USD/bbl | as is |
+| HO | US heating oil | HO=F | USD/gal | × 42 |
+| RB | US gasoline (RBOB) | RB=F | USD/gal | × 42 |
+| GO | UK gasoil (ICE) | 7F=F, GX=F (to be confirmed) | USD/t | ÷ 7.45 |
+
+Saved in `data/energy.json`. Front-month series can jump on contract roll dates. Negative prices are kept (WTI settled below zero in April 2020).
+
 ## Data rules
 
 - **History:** as far back as Yahoo has each index, capped just under 30 years.
 - **Calendar:** every weekday (Monday to Friday).
 - **Missing dates** (holidays, or a market that hasn't reported yet): filled with the previous date's close, so that day counts as 0% for that index.
 - **Failed download:** that index keeps its previous data, and the page shows a note.
-- **Timing:** 05:15 SGT is 21:15 UTC. The US closes last: 04:00 SGT in northern summer, 05:00 SGT in winter. GitHub usually starts scheduled jobs a few minutes late. Each run re-downloads the full history, so if a close wasn't final yet, the next day's run corrects it.
+- **Timing:** two scheduled runs. 05:15 SGT (21:15 UTC) downloads the indices every day. The energy futures are downloaded inside the NYMEX daily break (17:00–18:00 New York): by the 05:15 SGT run when the US is on summer time, and by the 06:15 SGT run (22:15 UTC) in winter. The script checks New York time itself, so daylight-saving changes are handled automatically. Manual runs download everything. Each run re-downloads the full history, so a late or skipped day is corrected by the next run.
 
 ## One-time setup (about 15 minutes)
 

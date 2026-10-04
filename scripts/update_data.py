@@ -35,12 +35,27 @@ SUBSTITUTE = {
     "^GSPTSE": "Canada 60 uses the S&P/TSX Composite because the TSX 60 was unavailable",
 }
 MIN_ROWS = 250  # a ticker must return at least about a year of history to be used
-OUT = Path(__file__).resolve().parent.parent / "data" / "indices.json"
+DATA = Path(__file__).resolve().parent.parent / "data"
+OUT = DATA / "indices.json"
+ENERGY_OUT = DATA / "energy.json"
+
+# Energy futures (Yahoo front-month continuous). Saved in USD per barrel: value x factor.
+# key, display name, native unit, tickers to try, factor to USD/bbl
+ENERGY = [
+    ("BRENT", "Brent crude",          "USD/bbl", ["BZ=F"],          1.0),
+    ("WTI",   "WTI crude (Texas)",    "USD/bbl", ["CL=F"],          1.0),
+    ("HO",    "US heating oil",       "USD/gal", ["HO=F"],          42.0),
+    ("RB",    "US gasoline (RBOB)",   "USD/gal", ["RB=F"],          42.0),
+    ("GO",    "UK gasoil (ICE)",      "USD/t",   ["7F=F", "GX=F"],  1 / 7.45),
+]
+ENERGY_MIN_ROWS = 250
 
 
-def download(tickers, start, end):
+
+def download(tickers, start, end, allow_negative=False, min_rows=None):
     """Return (ticker_used, Series of closes indexed by date) or (None, None)."""
     import yfinance as yf
+    min_rows = MIN_ROWS if min_rows is None else min_rows
     for t in tickers:
         try:
             df = yf.download(t, start=start, end=end, interval="1d",
@@ -54,17 +69,18 @@ def download(tickers, start, end):
         close = df["Close"]
         if isinstance(close, pd.DataFrame):  # newer yfinance returns a one-column frame
             close = close.iloc[:, 0]
-        close = clean(close)
-        if len(close) < MIN_ROWS:
+        close = clean(close, allow_negative)
+        if len(close) < min_rows:
             print(f"  {t}: only {len(close)} rows, trying the next ticker")
             continue
         return t, close
     return None, None
 
 
-def clean(close):
+def clean(close, allow_negative=False):
     close = pd.to_numeric(close, errors="coerce").dropna()
-    close = close[close > 0]
+    if not allow_negative:          # index levels are always positive; oil futures once were not (WTI, Apr 2020)
+        close = close[close > 0]
     idx = pd.to_datetime(close.index)
     if idx.tz is not None:
         idx = idx.tz_localize(None)
@@ -72,12 +88,12 @@ def clean(close):
     return close[~close.index.duplicated(keep="last")].sort_index()
 
 
-def load_existing():
-    """Previous file's real closes per index (forward-filled repeats removed)."""
-    if not OUT.exists():
+def load_existing(path):
+    """Previous file's real values per series (forward-filled repeats removed)."""
+    if not path.exists():
         return {}
     try:
-        old = json.loads(OUT.read_text())
+        old = json.loads(path.read_text())
         dates = pd.to_datetime(old["dates"])
         res = {}
         for k, vals in old["series"].items():
@@ -86,7 +102,7 @@ def load_existing():
             res[k] = (s, old.get("meta", {}).get(k, {}))
         return res
     except Exception as e:
-        print(f"Could not read existing data: {e}")
+        print(f"Could not read existing data in {path.name}: {e}")
         return {}
 
 
@@ -100,16 +116,16 @@ def build(closes):
     return cal, df.reindex(cal)
 
 
-def main():
-    now = datetime.now(timezone.utc)
-    end = (now + timedelta(days=1)).date()
-    start = (pd.Timestamp(now.date()) - pd.DateOffset(years=30) + pd.Timedelta(days=2)).date()
-    existing = load_existing()
-
+def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=None, digits=2):
+    """Download one set of series and write its JSON file. Returns the list of failed keys."""
+    existing = load_existing(out)
     closes, meta, failed = {}, {}, []
-    for key, name, tickers in INDICES:
+    for item in items:
+        key, name, tickers = item[0], item[1], item[-2] if len(item) == 5 else item[2]
+        unit = item[2] if len(item) == 5 else ""
+        factor = item[4] if len(item) == 5 else 1.0
         print(f"{key}: trying {', '.join(tickers)}")
-        used, s = download(tickers, start, end)
+        used, s = download(tickers, start, end, allow_negative, min_rows)
         if s is None:
             failed.append(key)
             if key in existing:
@@ -118,29 +134,72 @@ def main():
             else:
                 print(f"  {key}: download failed and there is no previous data")
             continue
-        closes[key] = s
+        closes[key] = s * factor
         meta[key] = {"name": name, "ticker": used, "substitute": SUBSTITUTE.get(used, ""),
                      "first": s.index.min().strftime("%Y-%m-%d"),
                      "last": s.index.max().strftime("%Y-%m-%d")}
+        if unit:
+            meta[key].update({"unit": unit, "factor": factor})
         print(f"  {key}: {used}, {len(s)} rows, {meta[key]['first']} to {meta[key]['last']}")
 
-    if len(failed) == len(INDICES):
-        print("No index downloaded; leaving the data file unchanged.")
-        sys.exit(1)
-
+    if not closes:
+        print(f"{label}: nothing downloaded and no previous data; file not written.")
+        return failed
     cal, df = build(closes)
-    order = [k for k, _, _ in INDICES if k in df.columns]
+    order = [it[0] for it in items if it[0] in df.columns]
     data = {
         "generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "Yahoo Finance daily closes (yfinance)",
         "dates": [d.strftime("%Y-%m-%d") for d in cal],
-        "series": {k: [None if pd.isna(v) else round(float(v), 2) for v in df[k]] for k in order},
+        "series": {k: [None if pd.isna(v) else round(float(v), digits) for v in df[k]] for k in order},
         "meta": {k: meta[k] for k in order},
         "failed": failed,
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(data, separators=(",", ":")))
-    print(f"Wrote {OUT}: {len(cal)} dates x {len(order)} indices. Failed: {failed or 'none'}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(data, separators=(",", ":")))
+    print(f"{label}: wrote {out.name}, {len(cal)} dates x {len(order)} series. Failed: {failed or 'none'}")
+    return failed
+
+
+SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
+SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
+
+
+def plan(schedule, ny_now):
+    """Decide what this run downloads.
+    Indices: every 05:15 SGT run. Energy: only inside the NYMEX daily break (17:00-18:00 New York),
+    which is 05:15 SGT when the US is on summer time and 06:15 SGT in winter.
+    Manual runs and pushes (no schedule) download both."""
+    if not schedule:
+        return True, True
+    in_break = ny_now.hour == 17
+    return schedule == SCHED_INDEX, in_break
+
+
+def main():
+    from zoneinfo import ZoneInfo
+    import os
+    now = datetime.now(timezone.utc)
+    end = (now + timedelta(days=1)).date()
+    start = (pd.Timestamp(now.date()) - pd.DateOffset(years=30) + pd.Timedelta(days=2)).date()
+    schedule = os.environ.get("SCHEDULE", "").strip()
+    ny = now.astimezone(ZoneInfo("America/New_York"))
+    do_idx, do_energy = plan(schedule, ny)
+    print(f"Run: {'schedule ' + schedule if schedule else 'manual/push'}; New York time {ny:%Y-%m-%d %H:%M %Z}. "
+          f"Indices: {'yes' if do_idx else 'skip'}. Energy: {'yes' if do_energy else 'skip (outside the 17:00-18:00 New York break)'}.")
+    print()
+
+    failed_idx = []
+    if do_idx:
+        failed_idx = run_set("Indices", INDICES, OUT, start, end, now)
+        print()
+    if do_energy:
+        run_set("Energy", ENERGY, ENERGY_OUT, start, end, now, allow_negative=True,
+                min_rows=ENERGY_MIN_ROWS, digits=3)
+
+    if do_idx and len(failed_idx) == len(INDICES):
+        print("No index downloaded.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

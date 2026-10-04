@@ -161,6 +161,8 @@ button{font:inherit;cursor:pointer}
 .lad-totals b,.lad-totals b.small{font-size:1rem;white-space:nowrap;margin-top:0;overflow:hidden;text-overflow:ellipsis}
 .lad-totals .plp{font-weight:500}
 .gap-totals{grid-template-columns:repeat(9,minmax(0,1fr))}
+.pinkv{color:#D4537E}
+.e-totals{grid-template-columns:repeat(8,minmax(0,1fr));margin:4px 0 12px;padding-top:0;border-top:0}
 .gap-totals .dd-first{border-left:1px solid var(--line);padding-left:10px}
 .gap-totals b:not(:has(.sub))::after{content:"\00a0";display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;margin-top:2px}
 .gap-totals b .sub{display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
@@ -173,9 +175,9 @@ button{font:inherit;cursor:pointer}
 @media (max-width:700px){.chart-box.tall{height:460px}}
 .ghost:disabled{opacity:.5;cursor:default}
 .hours-wrap{overflow-x:auto}
-.hours-svg{display:block;width:100%;min-width:620px;height:auto}
-.hours-svg .gt{font:600 13px "Familjen Grotesk","Public Sans",system-ui,sans-serif;fill:var(--ink)}
-.hours-svg .gs{font:400 11.5px "Public Sans",system-ui,sans-serif;fill:var(--muted)}
+.hours-svg{display:block;width:100%;min-width:860px;height:auto}
+.hours-svg .gt{font:600 14px "Familjen Grotesk","Public Sans",system-ui,sans-serif;fill:var(--ink)}
+.hours-svg .gs{font:400 13px "Public Sans",system-ui,sans-serif;fill:var(--muted)}
 .grp-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .grp-lbl{font-size:.8rem;color:var(--muted);margin-right:2px}
 .chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font:600 .82rem "Public Sans",system-ui,sans-serif}
@@ -198,6 +200,7 @@ button{font:inherit;cursor:pointer}
       <button role="tab" aria-selected="true" data-view="ladder">Dip ladder</button>
       <button role="tab" aria-selected="false" data-view="short">Rally ladder</button>
       <button role="tab" aria-selected="false" data-view="gap">Index gap</button>
+      <button role="tab" aria-selected="false" data-view="energy">Energy gap</button>
     </div>
     <div class="right">
       <select id="currency" aria-label="Currency"></select>
@@ -370,78 +373,141 @@ button{font:inherit;cursor:pointer}
         <button class="ghost" id="hoursToggle" type="button" aria-expanded="false" aria-controls="hoursBody">Show chart</button>
       </div>
       <div id="hoursBody" hidden>
-        <div class="hours-wrap"><svg class="hours-svg" viewBox="0 0 680 515" role="img" aria-label="Trading sessions of the 13 index markets in Singapore time">
-<defs><pattern id="gHA" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#EF9F27" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#EF9F27" stroke-width="1.6"/></pattern><pattern id="gHB" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#378ADD" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#378ADD" stroke-width="1.6"/></pattern><pattern id="gHG" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#888780" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#888780" stroke-width="1.6"/></pattern></defs>
-<g stroke="var(--line)" stroke-width="0.6"><line x1="210.00" y1="70" x2="210.00" y2="412" stroke-opacity="0.45"/><line x1="224.83" y1="70" x2="224.83" y2="412" stroke-opacity="0.45"/><line x1="239.66" y1="70" x2="239.66" y2="412" stroke-opacity="1"/><line x1="254.48" y1="70" x2="254.48" y2="412" stroke-opacity="0.45"/><line x1="269.31" y1="70" x2="269.31" y2="412" stroke-opacity="0.45"/><line x1="284.14" y1="70" x2="284.14" y2="412" stroke-opacity="1"/><line x1="298.97" y1="70" x2="298.97" y2="412" stroke-opacity="0.45"/><line x1="313.79" y1="70" x2="313.79" y2="412" stroke-opacity="0.45"/><line x1="328.62" y1="70" x2="328.62" y2="412" stroke-opacity="1"/><line x1="343.45" y1="70" x2="343.45" y2="412" stroke-opacity="0.45"/><line x1="358.28" y1="70" x2="358.28" y2="412" stroke-opacity="0.45"/><line x1="373.10" y1="70" x2="373.10" y2="412" stroke-opacity="1"/><line x1="387.93" y1="70" x2="387.93" y2="412" stroke-opacity="0.45"/><line x1="402.76" y1="70" x2="402.76" y2="412" stroke-opacity="0.45"/><line x1="417.59" y1="70" x2="417.59" y2="412" stroke-opacity="1"/><line x1="432.41" y1="70" x2="432.41" y2="412" stroke-opacity="0.45"/><line x1="447.24" y1="70" x2="447.24" y2="412" stroke-opacity="0.45"/><line x1="462.07" y1="70" x2="462.07" y2="412" stroke-opacity="1"/><line x1="476.90" y1="70" x2="476.90" y2="412" stroke-opacity="0.45"/><line x1="491.72" y1="70" x2="491.72" y2="412" stroke-opacity="0.45"/><line x1="506.55" y1="70" x2="506.55" y2="412" stroke-opacity="1"/><line x1="521.38" y1="70" x2="521.38" y2="412" stroke-opacity="0.45"/><line x1="536.21" y1="70" x2="536.21" y2="412" stroke-opacity="0.45"/><line x1="551.03" y1="70" x2="551.03" y2="412" stroke-opacity="1"/><line x1="565.86" y1="70" x2="565.86" y2="412" stroke-opacity="0.45"/><line x1="580.69" y1="70" x2="580.69" y2="412" stroke-opacity="0.45"/><line x1="595.52" y1="70" x2="595.52" y2="412" stroke-opacity="1"/><line x1="610.34" y1="70" x2="610.34" y2="412" stroke-opacity="0.45"/><line x1="625.17" y1="70" x2="625.17" y2="412" stroke-opacity="0.45"/><line x1="640.00" y1="70" x2="640.00" y2="412" stroke-opacity="1"/></g>
-<g stroke="var(--line)" stroke-width="0.6"><line x1="40" y1="124" x2="640" y2="124"/><line x1="40" y1="172" x2="640" y2="172"/><line x1="40" y1="220" x2="640" y2="220"/><line x1="40" y1="268" x2="640" y2="268"/><line x1="40" y1="316" x2="640" y2="316"/><line x1="40" y1="364" x2="640" y2="364"/></g>
-<text class="gs" x="239.66" y="40" text-anchor="middle">06:00</text><text class="gs" x="284.14" y="40" text-anchor="middle">09:00</text><text class="gs" x="328.62" y="40" text-anchor="middle">12:00</text><text class="gs" x="373.10" y="40" text-anchor="middle">15:00</text><text class="gs" x="417.59" y="40" text-anchor="middle">18:00</text><text class="gs" x="462.07" y="40" text-anchor="middle">21:00</text><text class="gs" x="506.55" y="40" text-anchor="middle">00:00</text><text class="gs" x="551.03" y="40" text-anchor="middle">03:00</text><text class="gs" x="595.52" y="40" text-anchor="middle">06:00</text><text class="gs" x="640.00" y="40" text-anchor="middle">09:00</text>
-<text class="gs" x="573" y="58" text-anchor="middle">next day</text>
-<text class="gt" x="40" y="93" dominant-baseline="central">AUS200</text><text class="gs" x="40" y="110" dominant-baseline="central">Sydney</text>
-<rect x="224.83" y="88" width="44.48" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Pre-open, order entry only (07:00–10:00 AEST): 05:00–08:00 SGT</title></rect>
-<rect x="358.28" y="88" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Closing auction: 14:00–14:10 SGT</title></rect>
-<rect x="269.31" y="88" width="88.97" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (AEST): 08:00–14:00 SGT</title></rect>
-<rect x="210.00" y="102" width="44.48" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Pre-open, order entry only (07:00–10:00 AEDT): 04:00–07:00 SGT</title></rect>
-<rect x="343.45" y="102" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Closing auction: 13:00–13:10 SGT</title></rect>
-<rect x="254.48" y="102" width="88.97" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (AEDT): 07:00–13:00 SGT</title></rect>
-<text class="gt" x="40" y="141" dominant-baseline="central">JPN225</text><text class="gs" x="40" y="158" dominant-baseline="central">Tokyo</text>
-<rect x="259.43" y="136" width="121.09" height="12" fill="url(#gHA)"><title>Northern summer — Japannext PTS day session (08:20–16:30 JST): 07:20–15:30 SGT</title></rect>
-<rect x="387.93" y="136" width="192.76" height="12" fill="url(#gHA)"><title>Northern summer — Japannext PTS night session (17:00–06:00 JST): 16:00–05:00 SGT</title></rect>
-<rect x="254.48" y="136" width="14.83" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — TSE pre-opening, order entry only: 07:00–08:00 SGT</title></rect>
-<rect x="269.31" y="136" width="37.07" height="12" rx="2" fill="#EF9F27"><title>Northern summer — TSE regular, morning: 08:00–10:30 SGT</title></rect>
-<rect x="321.21" y="136" width="44.48" height="12" rx="2" fill="#EF9F27"><title>Northern summer — TSE regular, afternoon: 11:30–14:30 SGT</title></rect>
-<rect x="259.43" y="150" width="121.09" height="12" fill="url(#gHB)"><title>Northern winter — Japannext PTS day session (08:20–16:30 JST): 07:20–15:30 SGT</title></rect>
-<rect x="387.93" y="150" width="192.76" height="12" fill="url(#gHB)"><title>Northern winter — Japannext PTS night session (17:00–06:00 JST): 16:00–05:00 SGT</title></rect>
-<rect x="254.48" y="150" width="14.83" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — TSE pre-opening, order entry only: 07:00–08:00 SGT</title></rect>
-<rect x="269.31" y="150" width="37.07" height="12" rx="2" fill="#378ADD"><title>Northern winter — TSE regular, morning: 08:00–10:30 SGT</title></rect>
-<rect x="321.21" y="150" width="44.48" height="12" rx="2" fill="#378ADD"><title>Northern winter — TSE regular, afternoon: 11:30–14:30 SGT</title></rect>
-<text class="gt" x="40" y="189" dominant-baseline="central">HK50</text><text class="gs" x="40" y="206" dominant-baseline="central">Hong Kong</text>
-<rect x="284.14" y="184" width="7.41" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Pre-opening auction: 09:00–09:30 SGT</title></rect>
-<rect x="387.93" y="184" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Closing auction: 16:00–16:10 SGT</title></rect>
-<rect x="291.55" y="184" width="37.07" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular, morning: 09:30–12:00 SGT</title></rect>
-<rect x="343.45" y="184" width="44.48" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular, afternoon: 13:00–16:00 SGT</title></rect>
-<rect x="284.14" y="198" width="7.41" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Pre-opening auction: 09:00–09:30 SGT</title></rect>
-<rect x="387.93" y="198" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Closing auction: 16:00–16:10 SGT</title></rect>
-<rect x="291.55" y="198" width="37.07" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular, morning: 09:30–12:00 SGT</title></rect>
-<rect x="343.45" y="198" width="44.48" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular, afternoon: 13:00–16:00 SGT</title></rect>
-<text class="gt" x="40" y="237" dominant-baseline="central">GER40</text><text class="gs" x="40" y="254" dominant-baseline="central">Frankfurt</text>
-<rect x="350.86" y="232" width="229.83" height="12" fill="url(#gHA)"><title>Northern summer — gettex (07:30–23:00 CEST): 13:30–05:00 SGT</title></rect>
-<rect x="370.63" y="232" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Xetra opening auction: 14:50–15:00 SGT</title></rect>
-<rect x="499.14" y="232" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Xetra closing auction: 23:30–23:35 SGT</title></rect>
-<rect x="373.10" y="232" width="126.03" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Xetra regular (CEST): 15:00–23:30 SGT</title></rect>
-<rect x="365.69" y="246" width="229.83" height="12" fill="url(#gHB)"><title>Northern winter — gettex (07:30–23:00 CET): 14:30–06:00 SGT</title></rect>
-<rect x="385.46" y="246" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Xetra opening auction: 15:50–16:00 SGT</title></rect>
-<rect x="513.97" y="246" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Xetra closing auction: 00:30–00:35 SGT</title></rect>
-<rect x="387.93" y="246" width="126.03" height="12" rx="2" fill="#378ADD"><title>Northern winter — Xetra regular (CET): 16:00–00:30 SGT</title></rect>
-<text class="gt" x="40" y="279" dominant-baseline="central">Europe and UK</text><text class="gs" x="40" y="294" dominant-baseline="central">UK100 · FRA40</text><text class="gs" x="40" y="308" dominant-baseline="central">ITA40 · ESP35</text>
-<rect x="370.63" y="280" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Opening auctions: 14:50–15:00 SGT</title></rect>
-<rect x="499.14" y="280" width="3.00" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Closing auctions: 23:30–23:35 SGT</title></rect>
-<rect x="373.10" y="280" width="126.03" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (BST/CEST): 15:00–23:30 SGT</title></rect>
-<rect x="385.46" y="294" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Opening auctions: 15:50–16:00 SGT</title></rect>
-<rect x="513.97" y="294" width="3.00" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Closing auctions: 00:30–00:35 SGT</title></rect>
-<rect x="387.93" y="294" width="126.03" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (GMT/CET): 16:00–00:30 SGT</title></rect>
-<text class="gt" x="40" y="327" dominant-baseline="central">US</text><text class="gs" x="40" y="342" dominant-baseline="central">US30 · US100</text><text class="gs" x="40" y="356" dominant-baseline="central">US500 · US2000</text>
-<rect x="469.48" y="328" width="96.38" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (EDT): 21:30–04:00 SGT</title></rect>
-<rect x="387.93" y="328" width="81.55" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — Pre-market (04:00–09:30 EDT): 16:00–21:30 SGT</title></rect>
-<rect x="565.86" y="328" width="59.31" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — After-hours (16:00–20:00 EDT): 04:00–08:00 SGT</title></rect>
-<rect x="484.31" y="342" width="96.38" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (EST): 22:30–05:00 SGT</title></rect>
-<rect x="402.76" y="342" width="81.55" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — Pre-market (04:00–09:30 EST): 17:00–22:30 SGT</title></rect>
-<rect x="580.69" y="342" width="59.31" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — After-hours (16:00–20:00 EST): 05:00–09:00 SGT</title></rect>
-<text class="gt" x="40" y="381" dominant-baseline="central">CAN60</text><text class="gs" x="40" y="398" dominant-baseline="central">Toronto</text>
-<rect x="432.41" y="376" width="37.07" height="12" rx="2" fill="none" stroke="#EF9F27" stroke-width="1.2"><title>Northern summer — Pre-open, order entry only (07:00–09:30 EDT): 19:00–21:30 SGT</title></rect>
-<rect x="469.48" y="376" width="96.38" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (EDT): 21:30–04:00 SGT</title></rect>
-<rect x="569.57" y="376" width="11.12" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — Extended session (16:15–17:00 EDT): 04:15–05:00 SGT</title></rect>
-<rect x="447.24" y="390" width="37.07" height="12" rx="2" fill="none" stroke="#378ADD" stroke-width="1.2"><title>Northern winter — Pre-open, order entry only (07:00–09:30 EST): 20:00–22:30 SGT</title></rect>
-<rect x="484.31" y="390" width="96.38" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (EST): 22:30–05:00 SGT</title></rect>
-<rect x="584.40" y="390" width="11.12" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — Extended session (16:15–17:00 EST): 05:15–06:00 SGT</title></rect>
-<line x1="584.40" y1="70" x2="584.40" y2="412" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 3"/>
-<rect x="40" y="432" width="16" height="10" rx="2" fill="#EF9F27"/><text class="gs" x="64" y="437" dominant-baseline="central">Regular, northern summer (top bar)</text>
-<rect x="360" y="432" width="16" height="10" rx="2" fill="#378ADD"/><text class="gs" x="384" y="437" dominant-baseline="central">Regular, northern winter (bottom bar)</text>
-<rect x="40" y="456" width="16" height="10" rx="2" fill="#888780" fill-opacity="0.28" stroke="#888780" stroke-width="1" stroke-dasharray="3 2"/><text class="gs" x="64" y="461" dominant-baseline="central">Pre/post-market, same exchange</text>
-<rect x="360" y="456" width="16" height="10" fill="url(#gHG)"/><text class="gs" x="384" y="461" dominant-baseline="central">Other venues (Japannext, gettex)</text>
-<rect x="40" y="480" width="16" height="10" rx="2" fill="none" stroke="#888780" stroke-width="1.2"/><text class="gs" x="64" y="485" dominant-baseline="central">Order entry or auction, no trading</text>
-<line x1="360" y1="485" x2="376" y2="485" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 3"/><text class="gs" x="384" y="485" dominant-baseline="central">05:15 SGT data update</text>
+        <div class="hours-wrap"><svg class="hours-svg" viewBox="0 0 1040 506" role="img" aria-label="Trading sessions in Singapore time">
+<defs><pattern id="hxA" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#EF9F27" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#EF9F27" stroke-width="1.6"/></pattern><pattern id="hxB" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#378ADD" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#378ADD" stroke-width="1.6"/></pattern><pattern id="hxG" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#888780" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#888780" stroke-width="1.6"/></pattern></defs>
+<g stroke="var(--line)" stroke-width="0.7"><line x1="250.00" y1="64" x2="250.00" y2="406" stroke-opacity="0.45"/><line x1="276.55" y1="64" x2="276.55" y2="406" stroke-opacity="0.45"/><line x1="303.10" y1="64" x2="303.10" y2="406" stroke-opacity="1"/><line x1="329.66" y1="64" x2="329.66" y2="406" stroke-opacity="0.45"/><line x1="356.21" y1="64" x2="356.21" y2="406" stroke-opacity="0.45"/><line x1="382.76" y1="64" x2="382.76" y2="406" stroke-opacity="1"/><line x1="409.31" y1="64" x2="409.31" y2="406" stroke-opacity="0.45"/><line x1="435.86" y1="64" x2="435.86" y2="406" stroke-opacity="0.45"/><line x1="462.41" y1="64" x2="462.41" y2="406" stroke-opacity="1"/><line x1="488.97" y1="64" x2="488.97" y2="406" stroke-opacity="0.45"/><line x1="515.52" y1="64" x2="515.52" y2="406" stroke-opacity="0.45"/><line x1="542.07" y1="64" x2="542.07" y2="406" stroke-opacity="1"/><line x1="568.62" y1="64" x2="568.62" y2="406" stroke-opacity="0.45"/><line x1="595.17" y1="64" x2="595.17" y2="406" stroke-opacity="0.45"/><line x1="621.72" y1="64" x2="621.72" y2="406" stroke-opacity="1"/><line x1="648.28" y1="64" x2="648.28" y2="406" stroke-opacity="0.45"/><line x1="674.83" y1="64" x2="674.83" y2="406" stroke-opacity="0.45"/><line x1="701.38" y1="64" x2="701.38" y2="406" stroke-opacity="1"/><line x1="727.93" y1="64" x2="727.93" y2="406" stroke-opacity="0.45"/><line x1="754.48" y1="64" x2="754.48" y2="406" stroke-opacity="0.45"/><line x1="781.03" y1="64" x2="781.03" y2="406" stroke-opacity="1"/><line x1="807.59" y1="64" x2="807.59" y2="406" stroke-opacity="0.45"/><line x1="834.14" y1="64" x2="834.14" y2="406" stroke-opacity="0.45"/><line x1="860.69" y1="64" x2="860.69" y2="406" stroke-opacity="1"/><line x1="887.24" y1="64" x2="887.24" y2="406" stroke-opacity="0.45"/><line x1="913.79" y1="64" x2="913.79" y2="406" stroke-opacity="0.45"/><line x1="940.34" y1="64" x2="940.34" y2="406" stroke-opacity="1"/><line x1="966.90" y1="64" x2="966.90" y2="406" stroke-opacity="0.45"/><line x1="993.45" y1="64" x2="993.45" y2="406" stroke-opacity="0.45"/><line x1="1020.00" y1="64" x2="1020.00" y2="406" stroke-opacity="1"/></g>
+<g stroke="var(--line)" stroke-width="0.7"><line x1="20" y1="118" x2="1020" y2="118"/><line x1="20" y1="166" x2="1020" y2="166"/><line x1="20" y1="214" x2="1020" y2="214"/><line x1="20" y1="262" x2="1020" y2="262"/><line x1="20" y1="310" x2="1020" y2="310"/><line x1="20" y1="358" x2="1020" y2="358"/></g>
+<text class="gs" x="303.10" y="30" text-anchor="middle">06:00</text><text class="gs" x="382.76" y="30" text-anchor="middle">09:00</text><text class="gs" x="462.41" y="30" text-anchor="middle">12:00</text><text class="gs" x="542.07" y="30" text-anchor="middle">15:00</text><text class="gs" x="621.72" y="30" text-anchor="middle">18:00</text><text class="gs" x="701.38" y="30" text-anchor="middle">21:00</text><text class="gs" x="781.03" y="30" text-anchor="middle">00:00</text><text class="gs" x="860.69" y="30" text-anchor="middle">03:00</text><text class="gs" x="940.34" y="30" text-anchor="middle">06:00</text><text class="gs" x="1020.00" y="30" text-anchor="middle">09:00</text>
+<text class="gs" x="901" y="50" text-anchor="middle">next day</text>
+<text class="gt" x="20" y="87" dominant-baseline="central">AUS200</text><text class="gs" x="20" y="104" dominant-baseline="central">Sydney</text>
+<rect x="276.55" y="82" width="79.66" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Pre-open, order entry only (07:00–10:00 AEST): 05:00–08:00 SGT</title></rect>
+<rect x="515.52" y="82" width="4.51" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Closing auction: about 14:00 SGT</title></rect>
+<rect x="356.21" y="82" width="159.31" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (AEST): 08:00–14:00 SGT</title></rect>
+<rect x="250.00" y="96" width="79.66" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Pre-open, order entry only (07:00–10:00 AEDT): 04:00–07:00 SGT</title></rect>
+<rect x="488.97" y="96" width="4.51" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Closing auction: about 13:00 SGT</title></rect>
+<rect x="329.66" y="96" width="159.31" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (AEDT): 07:00–13:00 SGT</title></rect>
+<text class="gt" x="20" y="135" dominant-baseline="central">JPN225</text><text class="gs" x="20" y="152" dominant-baseline="central">Tokyo</text>
+<rect x="338.51" y="130" width="216.84" height="12" fill="url(#hxA)"><title>Northern summer — Japannext PTS day session (08:20–16:30 JST): 07:20–15:30 SGT</title></rect>
+<rect x="568.62" y="130" width="345.17" height="12" fill="url(#hxA)"><title>Northern summer — Japannext PTS night session (17:00–06:00 JST): 16:00–05:00 SGT</title></rect>
+<rect x="329.66" y="130" width="26.55" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — TSE pre-opening, order entry only: 07:00–08:00 SGT</title></rect>
+<rect x="356.21" y="130" width="66.38" height="12" rx="2" fill="#EF9F27"><title>Northern summer — TSE regular, morning: 08:00–10:30 SGT</title></rect>
+<rect x="449.14" y="130" width="79.66" height="12" rx="2" fill="#EF9F27"><title>Northern summer — TSE regular, afternoon: 11:30–14:30 SGT</title></rect>
+<rect x="338.51" y="144" width="216.84" height="12" fill="url(#hxB)"><title>Northern winter — Japannext PTS day session (08:20–16:30 JST): 07:20–15:30 SGT</title></rect>
+<rect x="568.62" y="144" width="345.17" height="12" fill="url(#hxB)"><title>Northern winter — Japannext PTS night session (17:00–06:00 JST): 16:00–05:00 SGT</title></rect>
+<rect x="329.66" y="144" width="26.55" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — TSE pre-opening, order entry only: 07:00–08:00 SGT</title></rect>
+<rect x="356.21" y="144" width="66.38" height="12" rx="2" fill="#378ADD"><title>Northern winter — TSE regular, morning: 08:00–10:30 SGT</title></rect>
+<rect x="449.14" y="144" width="79.66" height="12" rx="2" fill="#378ADD"><title>Northern winter — TSE regular, afternoon: 11:30–14:30 SGT</title></rect>
+<text class="gt" x="20" y="183" dominant-baseline="central">HK50</text><text class="gs" x="20" y="200" dominant-baseline="central">Hong Kong</text>
+<rect x="382.76" y="178" width="13.28" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Pre-opening auction: 09:00–09:30 SGT</title></rect>
+<rect x="568.62" y="178" width="4.51" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Closing auction: about 16:00 SGT</title></rect>
+<rect x="396.03" y="178" width="66.38" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular, morning: 09:30–12:00 SGT</title></rect>
+<rect x="488.97" y="178" width="79.66" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular, afternoon: 13:00–16:00 SGT</title></rect>
+<rect x="382.76" y="192" width="13.28" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Pre-opening auction: 09:00–09:30 SGT</title></rect>
+<rect x="568.62" y="192" width="4.51" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Closing auction: about 16:00 SGT</title></rect>
+<rect x="396.03" y="192" width="66.38" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular, morning: 09:30–12:00 SGT</title></rect>
+<rect x="488.97" y="192" width="79.66" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular, afternoon: 13:00–16:00 SGT</title></rect>
+<text class="gt" x="20" y="231" dominant-baseline="central">GER40</text><text class="gs" x="20" y="248" dominant-baseline="central">Frankfurt</text>
+<rect x="502.24" y="226" width="411.55" height="12" fill="url(#hxA)"><title>Northern summer — gettex (07:30–23:00 CEST): 13:30–05:00 SGT</title></rect>
+<rect x="537.64" y="226" width="4.43" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Xetra opening auction: about 14:50 SGT</title></rect>
+<rect x="767.76" y="226" width="3.00" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Xetra closing auction: about 23:30 SGT</title></rect>
+<rect x="542.07" y="226" width="225.69" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Xetra regular (CEST): 15:00–23:30 SGT</title></rect>
+<rect x="528.79" y="240" width="411.55" height="12" fill="url(#hxB)"><title>Northern winter — gettex (07:30–23:00 CET): 14:30–06:00 SGT</title></rect>
+<rect x="564.20" y="240" width="4.43" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Xetra opening auction: about 15:50 SGT</title></rect>
+<rect x="794.31" y="240" width="3.00" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Xetra closing auction: about 00:30 SGT</title></rect>
+<rect x="568.62" y="240" width="225.69" height="12" rx="2" fill="#378ADD"><title>Northern winter — Xetra regular (CET): 16:00–00:30 SGT</title></rect>
+<text class="gt" x="20" y="273" dominant-baseline="central">Europe and UK</text><text class="gs" x="20" y="288" dominant-baseline="central">UK100 · FRA40</text><text class="gs" x="20" y="303" dominant-baseline="central">ITA40 · ESP35</text>
+<rect x="537.64" y="274" width="4.43" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Opening auctions: about 14:50 SGT</title></rect>
+<rect x="767.76" y="274" width="3.00" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Closing auctions: about 23:30 SGT</title></rect>
+<rect x="542.07" y="274" width="225.69" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (BST/CEST): 15:00–23:30 SGT</title></rect>
+<rect x="564.20" y="288" width="4.43" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Opening auctions: about 15:50 SGT</title></rect>
+<rect x="794.31" y="288" width="3.00" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Closing auctions: about 00:30 SGT</title></rect>
+<rect x="568.62" y="288" width="225.69" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (GMT/CET): 16:00–00:30 SGT</title></rect>
+<text class="gt" x="20" y="321" dominant-baseline="central">US</text><text class="gs" x="20" y="336" dominant-baseline="central">US30 · US100</text><text class="gs" x="20" y="351" dominant-baseline="central">US500 · US2000</text>
+<rect x="714.66" y="322" width="172.59" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (EDT): 21:30–04:00 SGT</title></rect>
+<rect x="568.62" y="322" width="146.03" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — Pre-market (04:00–09:30 EDT): 16:00–21:30 SGT</title></rect>
+<rect x="887.24" y="322" width="106.21" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — After-hours (16:00–20:00 EDT): 04:00–08:00 SGT</title></rect>
+<rect x="741.21" y="336" width="172.59" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (EST): 22:30–05:00 SGT</title></rect>
+<rect x="595.17" y="336" width="146.03" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — Pre-market (04:00–09:30 EST): 17:00–22:30 SGT</title></rect>
+<rect x="913.79" y="336" width="106.21" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — After-hours (16:00–20:00 EST): 05:00–09:00 SGT</title></rect>
+<text class="gt" x="20" y="375" dominant-baseline="central">CAN60</text><text class="gs" x="20" y="392" dominant-baseline="central">Toronto</text>
+<rect x="648.28" y="370" width="66.38" height="12" rx="2" fill="var(--sheet)" stroke="#EF9F27" stroke-width="1.4"><title>Northern summer — Pre-open, order entry only (07:00–09:30 EDT): 19:00–21:30 SGT</title></rect>
+<rect x="714.66" y="370" width="172.59" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Regular (EDT): 21:30–04:00 SGT</title></rect>
+<rect x="893.88" y="370" width="19.91" height="12" rx="2" fill="#EF9F27" fill-opacity="0.28" stroke="#EF9F27" stroke-width="1" stroke-dasharray="3 2"><title>Northern summer — Extended session (16:15–17:00 EDT): 04:15–05:00 SGT</title></rect>
+<rect x="674.83" y="384" width="66.38" height="12" rx="2" fill="var(--sheet)" stroke="#378ADD" stroke-width="1.4"><title>Northern winter — Pre-open, order entry only (07:00–09:30 EST): 20:00–22:30 SGT</title></rect>
+<rect x="741.21" y="384" width="172.59" height="12" rx="2" fill="#378ADD"><title>Northern winter — Regular (EST): 22:30–05:00 SGT</title></rect>
+<rect x="920.43" y="384" width="19.91" height="12" rx="2" fill="#378ADD" fill-opacity="0.28" stroke="#378ADD" stroke-width="1" stroke-dasharray="3 2"><title>Northern winter — Extended session (16:15–17:00 EST): 05:15–06:00 SGT</title></rect>
+<line x1="920.43" y1="64" x2="920.43" y2="406" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 3"/>
+<rect x="20" y="428" width="18" height="10" rx="2" fill="#EF9F27"/><text class="gs" x="46" y="433" dominant-baseline="central">Regular, northern summer (top bar)</text>
+<rect x="540" y="428" width="18" height="10" rx="2" fill="#378ADD"/><text class="gs" x="566" y="433" dominant-baseline="central">Regular, northern winter (bottom bar)</text>
+<rect x="20" y="452" width="18" height="10" rx="2" fill="#888780" fill-opacity="0.28" stroke="#888780" stroke-width="1" stroke-dasharray="3 2"/><text class="gs" x="46" y="457" dominant-baseline="central">Pre/post-market, same exchange</text>
+<rect x="540" y="452" width="18" height="10" fill="url(#hxG)"/><text class="gs" x="566" y="457" dominant-baseline="central">Other venues (Japannext, gettex)</text>
+<rect x="20" y="476" width="18" height="10" rx="2" fill="none" stroke="#888780" stroke-width="1.4"/><text class="gs" x="46" y="481" dominant-baseline="central">Order entry or auction, no trading</text>
+<line x1="540" y1="481" x2="558" y2="481" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 3"/><text class="gs" x="566" y="481" dominant-baseline="central">05:15 SGT index data update</text>
 </svg></div>
         <p class="hint lad-note">Hover a bar for exact times. Daily closes in the data are the official regular-session closes; pre/post-market, other venues and CFD trading don't change them. Northern summer is roughly late March to late October (US/Canada from the 2nd Sunday of March to the 1st Sunday of November); Australia's clocks move the opposite way.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ENERGY GAP -->
+  <main id="energy" hidden>
+    <section class="ledger">
+      <h2 class="lad-title">Energy gap analysis</h2>
+      <p class="lad-intro">Front-month futures prices, all converted to <em>USD per barrel</em> so each pair is comparable (gallons × 42, tonnes of gasoil ÷ 7.45). The gap is the first price minus the second. The gap line is black within ±2σ of its average for the selected period, pink between 2σ and 3σ, and red beyond 3σ.</p>
+      <div class="lad-inputs lad-first">
+        <label><span>Start date</span><input type="date" id="eStart"></label>
+        <label><span>Quick range</span><select id="eQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="all">All data</option></select></label>
+      </div>
+      <div class="lad-inputs">
+        <label class="chk"><input type="checkbox" id="ePrices" checked> Also show prices on the gap charts</label>
+      </div>
+      <p class="hint lad-note" id="eSrc">Loading data…</p>
+    </section>
+    <div id="ePanels"></div>
+
+    <section class="panel">
+      <div class="txhead">
+        <h3>Energy market hours in Singapore time</h3>
+        <button class="ghost" id="ehoursToggle" type="button" aria-expanded="false" aria-controls="ehoursBody">Show chart</button>
+      </div>
+      <div id="ehoursBody" hidden>
+        <div class="hours-wrap"><svg class="hours-svg" viewBox="0 0 1040 314" role="img" aria-label="Trading sessions in Singapore time">
+<defs><pattern id="heA" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#EF9F27" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#EF9F27" stroke-width="1.6"/></pattern><pattern id="heB" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#378ADD" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#378ADD" stroke-width="1.6"/></pattern><pattern id="heG" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#888780" fill-opacity="0.12"/><line x1="0" y1="0" x2="0" y2="5" stroke="#888780" stroke-width="1.6"/></pattern></defs>
+<g stroke="var(--line)" stroke-width="0.7"><line x1="250.00" y1="64" x2="250.00" y2="214" stroke-opacity="0.45"/><line x1="276.55" y1="64" x2="276.55" y2="214" stroke-opacity="0.45"/><line x1="303.10" y1="64" x2="303.10" y2="214" stroke-opacity="1"/><line x1="329.66" y1="64" x2="329.66" y2="214" stroke-opacity="0.45"/><line x1="356.21" y1="64" x2="356.21" y2="214" stroke-opacity="0.45"/><line x1="382.76" y1="64" x2="382.76" y2="214" stroke-opacity="1"/><line x1="409.31" y1="64" x2="409.31" y2="214" stroke-opacity="0.45"/><line x1="435.86" y1="64" x2="435.86" y2="214" stroke-opacity="0.45"/><line x1="462.41" y1="64" x2="462.41" y2="214" stroke-opacity="1"/><line x1="488.97" y1="64" x2="488.97" y2="214" stroke-opacity="0.45"/><line x1="515.52" y1="64" x2="515.52" y2="214" stroke-opacity="0.45"/><line x1="542.07" y1="64" x2="542.07" y2="214" stroke-opacity="1"/><line x1="568.62" y1="64" x2="568.62" y2="214" stroke-opacity="0.45"/><line x1="595.17" y1="64" x2="595.17" y2="214" stroke-opacity="0.45"/><line x1="621.72" y1="64" x2="621.72" y2="214" stroke-opacity="1"/><line x1="648.28" y1="64" x2="648.28" y2="214" stroke-opacity="0.45"/><line x1="674.83" y1="64" x2="674.83" y2="214" stroke-opacity="0.45"/><line x1="701.38" y1="64" x2="701.38" y2="214" stroke-opacity="1"/><line x1="727.93" y1="64" x2="727.93" y2="214" stroke-opacity="0.45"/><line x1="754.48" y1="64" x2="754.48" y2="214" stroke-opacity="0.45"/><line x1="781.03" y1="64" x2="781.03" y2="214" stroke-opacity="1"/><line x1="807.59" y1="64" x2="807.59" y2="214" stroke-opacity="0.45"/><line x1="834.14" y1="64" x2="834.14" y2="214" stroke-opacity="0.45"/><line x1="860.69" y1="64" x2="860.69" y2="214" stroke-opacity="1"/><line x1="887.24" y1="64" x2="887.24" y2="214" stroke-opacity="0.45"/><line x1="913.79" y1="64" x2="913.79" y2="214" stroke-opacity="0.45"/><line x1="940.34" y1="64" x2="940.34" y2="214" stroke-opacity="1"/><line x1="966.90" y1="64" x2="966.90" y2="214" stroke-opacity="0.45"/><line x1="993.45" y1="64" x2="993.45" y2="214" stroke-opacity="0.45"/><line x1="1020.00" y1="64" x2="1020.00" y2="214" stroke-opacity="1"/></g>
+<g stroke="var(--line)" stroke-width="0.7"><line x1="20" y1="118" x2="1020" y2="118"/><line x1="20" y1="166" x2="1020" y2="166"/></g>
+<text class="gs" x="303.10" y="30" text-anchor="middle">06:00</text><text class="gs" x="382.76" y="30" text-anchor="middle">09:00</text><text class="gs" x="462.41" y="30" text-anchor="middle">12:00</text><text class="gs" x="542.07" y="30" text-anchor="middle">15:00</text><text class="gs" x="621.72" y="30" text-anchor="middle">18:00</text><text class="gs" x="701.38" y="30" text-anchor="middle">21:00</text><text class="gs" x="781.03" y="30" text-anchor="middle">00:00</text><text class="gs" x="860.69" y="30" text-anchor="middle">03:00</text><text class="gs" x="940.34" y="30" text-anchor="middle">06:00</text><text class="gs" x="1020.00" y="30" text-anchor="middle">09:00</text>
+<text class="gs" x="901" y="50" text-anchor="middle">next day</text>
+<text class="gt" x="20" y="87" dominant-baseline="central">Brent crude</text><text class="gs" x="20" y="104" dominant-baseline="central">ICE London · BZ=F settles on it</text>
+<rect x="250.00" y="82" width="53.10" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Trading continues from the previous day: 04:00–06:00 SGT</title></rect>
+<rect x="356.21" y="82" width="584.14" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Trading (01:00–23:00 BST): 08:00–06:00 SGT</title></rect>
+<rect x="844.12" y="80" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"><title>Northern summer — Settlement window 19:28–19:30 London: about 02:30 SGT</title></rect>
+<rect x="250.00" y="96" width="79.66" height="12" rx="2" fill="#378ADD"><title>Northern winter — Trading continues from the previous day: 04:00–07:00 SGT</title></rect>
+<rect x="382.76" y="96" width="584.14" height="12" rx="2" fill="#378ADD"><title>Northern winter — Trading (01:00–23:00 GMT): 09:00–07:00 SGT</title></rect>
+<rect x="870.67" y="94" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"><title>Northern winter — Settlement window 19:28–19:30 London: about 03:30 SGT</title></rect>
+<text class="gt" x="20" y="129" dominant-baseline="central">WTI · heating oil · gasoline</text><text class="gs" x="20" y="144" dominant-baseline="central">NYMEX (CME Globex)</text><text class="gs" x="20" y="159" dominant-baseline="central">CL=F · HO=F · RB=F · BZ=F</text>
+<rect x="250.00" y="130" width="26.55" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Trading continues from the previous day: 04:00–05:00 SGT</title></rect>
+<rect x="303.10" y="130" width="610.69" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Trading (18:00–17:00 EDT), break 17:00–18:00: 06:00–05:00 SGT</title></rect>
+<rect x="844.12" y="128" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"><title>Northern summer — Settlement 14:28–14:30 New York: about 02:30 SGT</title></rect>
+<rect x="250.00" y="144" width="53.10" height="12" rx="2" fill="#378ADD"><title>Northern winter — Trading continues from the previous day: 04:00–06:00 SGT</title></rect>
+<rect x="329.66" y="144" width="610.69" height="12" rx="2" fill="#378ADD"><title>Northern winter — Trading (18:00–17:00 EST), break 17:00–18:00: 07:00–06:00 SGT</title></rect>
+<rect x="870.67" y="142" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"><title>Northern winter — Settlement 14:28–14:30 New York: about 03:30 SGT</title></rect>
+<text class="gt" x="20" y="183" dominant-baseline="central">UK gasoil</text><text class="gs" x="20" y="200" dominant-baseline="central">ICE London</text>
+<rect x="250.00" y="178" width="53.10" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Trading continues from the previous day: 04:00–06:00 SGT</title></rect>
+<rect x="356.21" y="178" width="584.14" height="12" rx="2" fill="#EF9F27"><title>Northern summer — Trading (01:00–23:00 BST): 08:00–06:00 SGT</title></rect>
+<rect x="763.93" y="176" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"><title>Northern summer — Settlement about 16:27–16:30 London: about 23:30 SGT</title></rect>
+<rect x="250.00" y="192" width="79.66" height="12" rx="2" fill="#378ADD"><title>Northern winter — Trading continues from the previous day: 04:00–07:00 SGT</title></rect>
+<rect x="382.76" y="192" width="584.14" height="12" rx="2" fill="#378ADD"><title>Northern winter — Trading (01:00–23:00 GMT): 09:00–07:00 SGT</title></rect>
+<rect x="790.48" y="190" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"><title>Northern winter — Settlement about 16:27–16:30 London: about 00:30 SGT</title></rect>
+<line x1="920.43" y1="64" x2="920.43" y2="214" stroke="#EF9F27" stroke-width="1.4" stroke-dasharray="5 3"/>
+<line x1="946.98" y1="64" x2="946.98" y2="214" stroke="#378ADD" stroke-width="1.4" stroke-dasharray="5 3"/>
+<rect x="20" y="236" width="18" height="10" rx="2" fill="#EF9F27"/><text class="gs" x="46" y="241" dominant-baseline="central">Trading, US/UK summer time (top bar)</text>
+<rect x="540" y="236" width="18" height="10" rx="2" fill="#378ADD"/><text class="gs" x="566" y="241" dominant-baseline="central">Trading, US/UK winter time (bottom bar)</text>
+<rect x="26" y="257" width="5" height="16" rx="1.5" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.4"/><text class="gs" x="46" y="265" dominant-baseline="central">Daily settlement window (sets the price used)</text>
+<rect x="540" y="260" width="18" height="10" rx="2" fill="none" stroke="var(--line)" stroke-dasharray="2 2"/><text class="gs" x="566" y="265" dominant-baseline="central">Gap between bars: daily trading break</text>
+<line x1="20" y1="289" x2="38" y2="289" stroke="#EF9F27" stroke-width="1.4" stroke-dasharray="5 3"/><text class="gs" x="46" y="289" dominant-baseline="central">05:15 SGT energy update (US summer time)</text>
+<line x1="540" y1="289" x2="558" y2="289" stroke="#378ADD" stroke-width="1.4" stroke-dasharray="5 3"/><text class="gs" x="566" y="289" dominant-baseline="central">06:15 SGT energy update (US winter time)</text>
+</svg></div>
+        <p class="hint lad-note">Hover a bar for exact times. The white markers show each market's daily settlement, which sets the price used here. NYMEX pauses daily 17:00–18:00 New York; ICE pauses 23:00–01:00 London. The energy update runs inside the NYMEX break: 05:15 SGT when the US is on summer time, 06:15 SGT in winter. Times move with US/UK daylight saving.</p>
       </div>
     </section>
   </main>
@@ -458,7 +524,7 @@ try{ const c=localStorage.getItem("finmon-currency"); if(CUR.includes(c)) $("cur
 $("currency").addEventListener("change",()=>{ try{ localStorage.setItem("finmon-currency",$("currency").value); }catch(e){} });
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
-  ["ladder","short","gap"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
+  ["ladder","short","gap","energy"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
 }));
 })();
 </script>
@@ -1002,11 +1068,167 @@ load();
 </script>
 <script>
 (function(){
-  const b=document.getElementById("hoursToggle"), body=document.getElementById("hoursBody"), K="finmon-hours-open";
-  const set=v=>{ body.hidden=!v; b.textContent=v?"Hide chart":"Show chart"; b.setAttribute("aria-expanded",String(v)); };
-  let open=false; try{ open=localStorage.getItem(K)==="1"; }catch(e){}
-  set(open);
-  b.addEventListener("click",()=>{ open=!open; set(open); try{ localStorage.setItem(K, open?"1":"0"); }catch(e){} });
+"use strict";
+const $ = id => document.getElementById(id);
+const LK = "finmon-energy-v1";
+const PAIRS = [
+  { a:"BRENT", b:"WTI", title:"Brent − WTI" },
+  { a:"HO",    b:"RB",  title:"US heating oil − US gasoline" },
+  { a:"HO",    b:"GO",  title:"US heating oil − UK gasoil" },
+];
+const CA="#378ADD", CB="#EF9F27";
+let D=null, dates=[], ts=[], charts=[];
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
+const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+const num = v => v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const sg = v => (v>0.005?"+":v<-0.005?"−":"")+num(Math.abs(v));
+const NAMES = {BRENT:"Brent crude", WTI:"WTI crude (Texas)", HO:"US heating oil", RB:"US gasoline (RBOB)", GO:"UK gasoil (ICE)"};
+const nameOf = k => (D&&D.meta[k]&&D.meta[k].name)||NAMES[k]||k;
+
+function buildPanels(){
+  const host=$("ePanels"); host.innerHTML="";
+  PAIRS.forEach((p,i)=>{
+    const sec=document.createElement("section"); sec.className="panel";
+    sec.innerHTML=`<div class="txhead"><h3 id="eT${i}">${p.title}</h3><span class="unit-note">USD per barrel</span></div>
+      <div class="totals lad-totals e-totals">
+        <div><span id="eLA${i}">${nameOf(p.a)}</span><b id="eVA${i}">—</b></div>
+        <div><span id="eLB${i}">${nameOf(p.b)}</span><b id="eVB${i}">—</b></div>
+        <div><span>Gap<br>(last date)</span><b id="eVG${i}">—</b></div>
+        <div><span>Average gap</span><b id="eVAv${i}">—</b></div>
+        <div><span>Highest gap</span><b id="eVHi${i}">—</b></div>
+        <div><span>Lowest gap</span><b id="eVLo${i}">—</b></div>
+        <div><span>Std dev (σ)<br>of gap</span><b id="eVSd${i}">—</b></div>
+        <div><span>Latest gap<br>vs average</span><b id="eVZ${i}">—</b></div>
+      </div>
+      <div class="chart-box" id="eBox${i}"><canvas id="eC${i}" role="img" aria-label="${p.title}: gap and prices by date"></canvas></div>
+      <p class="hint lad-note" id="eN${i}"></p>`;
+    host.appendChild(sec);
+  });
+}
+
+async function load(){
+  buildPanels();
+  try{
+    const r=await fetch("data/energy.json",{cache:"no-store"});
+    if(!r.ok) throw new Error(r.status);
+    D=await r.json();
+  }catch(e){ $("eSrc").textContent="Couldn't load the energy data (data/energy.json). It's created by the daily workflow; run it once from the Actions tab."; return; }
+  dates=D.dates; ts=dates.map(d=>Date.parse(d+"T00:00:00Z"));
+  $("eQuick").value="1y";
+  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(o.start) $("eStart").value=o.start; if(o.quick!==undefined) $("eQuick").value=o.quick; $("ePrices").checked=o.prices!==false; } }catch(e){}
+  render();
+}
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({start:$("eStart").value, quick:$("eQuick").value, prices:$("ePrices").checked})); }catch(e){} }
+
+function firstIdx(k){ const v=D.series[k]; if(!v) return -1; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
+function applyQuick(minIdx){
+  const q=$("eQuick").value; if(!q) return;
+  if(q==="all"){ $("eStart").value=dates[minIdx]; return; }
+  const last=new Date(dates[dates.length-1]+"T00:00:00"); let t=new Date(last);
+  if(q==="ytd") t=new Date(last.getFullYear(),0,1);
+  else { const n=parseInt(q,10); if(q.endsWith("m")) t.setMonth(t.getMonth()-n); else t.setFullYear(t.getFullYear()-n); }
+  const want=iso(t); $("eStart").value = want<dates[minIdx] ? dates[minIdx] : (dates.find(d=>d>=want)||dates[minIdx]);
+}
+
+function render(){
+  if(!D) return;
+  const firsts=Object.keys(D.series).map(firstIdx).filter(i=>i>=0);
+  const minIdx=Math.min(...firsts);
+  $("eStart").min=dates[minIdx]; $("eStart").max=dates[dates.length-1];
+  applyQuick(minIdx);
+  let st=$("eStart").value; if(!st||st<dates[minIdx]){ st=dates[minIdx]; $("eStart").value=st; }
+  if(st>dates[dates.length-1]){ st=dates[dates.length-1]; $("eStart").value=st; }
+  const sIdx=Math.max(minIdx, dates.findIndex(d=>d>=st));
+  save();
+  const upd=new Date(D.generated).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  const tick=Object.entries(D.meta).map(([k,m])=>`${m.name} ${m.ticker}${m.unit&&m.unit!=="USD/bbl"?` (${m.unit})`:""}`).join(", ");
+  $("eSrc").textContent=`Yahoo Finance front-month futures, updated ${upd}: ${tick}.${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")}.`:""} Weekdays with no settlement carry the previous price forward. Front-month series can jump on contract roll dates.`;
+  PAIRS.forEach((p,i)=>renderPair(p,i,sIdx));
+}
+
+function renderPair(p,i,sIdx){
+  const va=D.series[p.a], vb=D.series[p.b];
+  $("eLA"+i).textContent=nameOf(p.a); $("eLB"+i).textContent=nameOf(p.b);
+  const box=$("eBox"+i);
+  if(!va||!vb){
+    const miss=[!va&&p.a,!vb&&p.b].filter(Boolean).map(nameOf).join(" and ");
+    if(charts[i]){charts[i].destroy();charts[i]=null;}
+    box.hidden=true; ["eVA","eVB","eVG","eVAv","eVHi","eVLo","eVSd","eVZ"].forEach(id=>{ $(id+i).textContent="—"; $(id+i).className=""; });
+    $("eN"+i).textContent=`No data for ${miss} yet. Yahoo Finance may not carry this market; the daily workflow keeps trying.`;
+    return;
+  }
+  box.hidden=false;
+  let s0=sIdx; while(s0<dates.length && (va[s0]==null||vb[s0]==null)) s0++;
+  if(s0>=dates.length){ $("eN"+i).textContent="No dates where both prices exist."; return; }
+  const pA=[],pB=[],pG=[]; let sum=0,hi=-Infinity,lo=Infinity,iHi=s0,iLo=s0;
+  for(let j=s0;j<dates.length;j++){ const g=va[j]-vb[j]; pA.push({x:ts[j],y:va[j]}); pB.push({x:ts[j],y:vb[j]}); pG.push({x:ts[j],y:g}); sum+=g; if(g>hi){hi=g;iHi=j;} if(g<lo){lo=g;iLo=j;} }
+  const last=pG[pG.length-1].y, avg=sum/pG.length;
+  const sd=Math.sqrt(pG.reduce((t,q)=>t+(q.y-avg)**2,0)/pG.length);
+  const zOf=g=> sd>0 ? (g-avg)/sd : 0;
+  const PINK="#D4537E";
+  const band=z=>{ const a=Math.abs(z); return a>3?"red":a>2?"pink":"in"; };
+  const set=(id,v,signed)=>{ $(id+i).textContent=signed?sg(v):num(v); $(id+i).className=signed?(v>=0?"pos":"neg"):""; };
+  set("eVA",va[dates.length-1],false); set("eVB",vb[dates.length-1],false);
+  set("eVG",last,true); set("eVAv",avg,true); set("eVHi",hi,true); set("eVLo",lo,true);
+  $("eVHi"+i).title=fmtD(dates[iHi]); $("eVLo"+i).title=fmtD(dates[iLo]);
+  $("eVSd"+i).textContent=num(sd); $("eVSd"+i).className="";
+  const bc=g=>{ const b=band(zOf(g)); return b==="red"?"neg":b==="pink"?"pinkv":""; };
+  $("eVAv"+i).className=""; $("eVHi"+i).className=bc(hi); $("eVLo"+i).className=bc(lo);
+  const zL=zOf(last); $("eVZ"+i).textContent=(zL>0.005?"+":zL<-0.005?"−":"")+Math.abs(zL).toFixed(2)+"σ";
+  $("eVZ"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
+  $("eVG"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
+  $("eN"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
+
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
+  const showP=$("ePrices").checked;
+  const tA=(D.meta[p.a]||{}).ticker||p.a, tB=(D.meta[p.b]||{}).ticker||p.b;
+  const colOf=z=>{ const b=band(z); return b==="red"?red:b==="pink"?PINK:ink; };
+  const x0=ts[s0], x1=ts[ts.length-1], hl=(y,label,color,dash,w)=>({ label, data:[{x:x0,y},{x:x1,y}], parsing:false, yAxisID:"y", borderColor:color, borderWidth:w, borderDash:dash, pointRadius:0, fill:false, isRef:true });
+  const ds=[{ label:`Gap ${tA} − ${tB}`, data:pG, parsing:false, yAxisID:"y", borderWidth:2.2, pointRadius:0, tension:0, borderColor:ink,
+    segment:{ borderColor:c=>colOf(zOf((c.p0.parsed.y+c.p1.parsed.y)/2)) }, fill:false },
+    hl(avg,"Average gap",muted,[],1),
+    hl(avg+2*sd,"±2σ",PINK,[6,4],1.2), hl(avg-2*sd,"±2σ",PINK,[6,4],1.2),
+    hl(avg+3*sd,"±3σ",red,[3,3],1.2),  hl(avg-3*sd,"±3σ",red,[3,3],1.2)];
+  if(showP){
+    ds.push({ label:`${nameOf(p.a)} (${tA})`, data:pA, parsing:false, yAxisID:"y2", borderColor:CA, borderWidth:1.4, pointRadius:0, fill:false });
+    ds.push({ label:`${nameOf(p.b)} (${tB})`, data:pB, parsing:false, yAxisID:"y2", borderColor:CB, borderWidth:1.4, pointRadius:0, borderDash:[5,4], fill:false });
+  }
+  const long=(ts[ts.length-1]-ts[s0])>3*365*864e5;
+  const opts={ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"nearest",axis:"x",intersect:false},
+    scales:{
+      x:{ type:"linear", min:ts[s0], max:ts[ts.length-1],
+          afterBuildTicks: long ? (ax=>{ const t=[]; const y0=new Date(ax.min).getUTCFullYear(), y1=new Date(ax.max).getUTCFullYear(); const step=Math.max(1,Math.ceil((y1-y0+1)/10)); for(let y=y0;y<=y1;y+=step){ const v=Date.UTC(y,0,1); if(v>=ax.min&&v<=ax.max) t.push({value:v}); } if(t.length>=2) ax.ticks=t; }) : undefined,
+          ticks:{color:muted,maxTicksLimit:8,callback:v=>new Date(v).toLocaleDateString("en-US",long?{year:"numeric",timeZone:"UTC"}:{month:"short",year:"2-digit",timeZone:"UTC"})}, grid:{color:line} },
+      y:{ position:"left", title:{display:true,text:"Gap (USD/bbl)",color:muted}, ticks:{color:muted}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} },
+      y2:{ display:showP, position:"right", title:{display:true,text:"Price (USD/bbl)",color:muted}, ticks:{color:muted}, grid:{drawOnChartArea:false} }
+    },
+    plugins:{ decimation:{enabled:true,algorithm:"lttb",samples:900},
+      legend:{display:true, onClick:(e,item,leg)=>{ const ch=leg.chart, lab=item.text, vis=!ch.isDatasetVisible(item.datasetIndex); ch.data.datasets.forEach((d,k)=>{ if(d.label===lab) ch.setDatasetVisibility(k,vis); }); ch.update("none"); }, labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex}},
+      tooltip:{ callbacks:{ title:it=>new Date(it[0].parsed.x).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"}),
+        label:it=>`${it.dataset.label}: ${it.dataset.yAxisID==="y"?sg(it.parsed.y)+(it.dataset.isRef?"":`  (${(zOf(it.parsed.y)>=0?"+":"−")+Math.abs(zOf(it.parsed.y)).toFixed(2)}σ)`):num(it.parsed.y)}` } } } };
+  if(!window.Chart) return;
+  if(charts[i]){ charts[i].data.datasets=ds; charts[i].options=opts; charts[i].update(); }
+  else charts[i]=new Chart($("eC"+i),{type:"line",data:{datasets:ds},options:opts});
+}
+
+$("eQuick").addEventListener("change",render);
+$("eStart").addEventListener("change",()=>{ $("eQuick").value=""; render(); });
+$("ePrices").addEventListener("change",render);
+document.querySelectorAll('.tabs button[data-view="energy"]').forEach(b=>b.addEventListener("click",()=>{ charts.forEach((c,i)=>{ if(c){c.destroy();charts[i]=null;} }); requestAnimationFrame(render); }));
+const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ charts.forEach((c,i)=>{ if(c){c.destroy();charts[i]=null;} }); render(); });
+load();
+})();
+</script>
+<script>
+(function(){
+  [["hours","finmon-hours-open"],["ehours","finmon-ehours-open"]].forEach(([id,K])=>{
+    const b=document.getElementById(id+"Toggle"), body=document.getElementById(id+"Body"); if(!b) return;
+    const set=v=>{ body.hidden=!v; b.textContent=v?"Hide chart":"Show chart"; b.setAttribute("aria-expanded",String(v)); };
+    let open=false; try{ open=localStorage.getItem(K)==="1"; }catch(e){}
+    set(open);
+    b.addEventListener("click",()=>{ open=!open; set(open); try{ localStorage.setItem(K, open?"1":"0"); }catch(e){} });
+  });
 })();
 </script>
 </body>

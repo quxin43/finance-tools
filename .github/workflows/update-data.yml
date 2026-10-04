@@ -2,7 +2,8 @@ name: Update index data and publish site
 
 on:
   schedule:
-    - cron: "15 21 * * *"  # every day at 21:15 UTC = 05:15 Singapore time
+    - cron: "15 21 * * *"  # 05:15 SGT: indices every day; energy when the US is on summer time
+    - cron: "15 22 * * *"  # 06:15 SGT: energy only, when the US is on winter time
   workflow_dispatch:        # adds a "Run workflow" button for a manual update
   push:
     branches: [main]        # republish whenever you change the page
@@ -33,13 +34,15 @@ jobs:
         run: pip install --upgrade yfinance pandas
 
       - name: Download data
+        env:
+          SCHEDULE: ${{ github.event.schedule }}   # empty for manual runs and pushes
         run: python scripts/update_data.py
 
       - name: Save data to the repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add data/indices.json
+          git add data/
           if git diff --cached --quiet; then
             echo "No data changes"
           else

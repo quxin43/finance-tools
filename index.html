@@ -203,7 +203,6 @@ button{font:inherit;cursor:pointer}
       <button role="tab" aria-selected="false" data-view="energy">Energy gap</button>
     </div>
     <div class="right">
-      <select id="currency" aria-label="Currency"></select>
     </div>
   </header>
 
@@ -242,7 +241,7 @@ button{font:inherit;cursor:pointer}
 
     <section class="panel">
       <div class="txhead">
-        <h3>Tranches <span class="unit-note">amounts in <span class="curcode">SGD</span></span></h3>
+        <h3>Tranches</h3>
         <label class="slide">Rebound d<sub>max</sub>: <b id="lSelV"></b><input type="range" id="lSel" min="0" max="60" step="0.5" value="20"></label>
       </div>
       <div class="table-wrap"><table class="lad-table">
@@ -294,7 +293,7 @@ button{font:inherit;cursor:pointer}
 
     <section class="panel">
       <div class="txhead">
-        <h3>Tranches <span class="unit-note">amounts in <span class="curcode">SGD</span></span></h3>
+        <h3>Tranches</h3>
         <label class="slide">Drop: <b id="sSelV"></b><input type="range" id="sSel" min="0" max="1000" step="1" value="1000"></label>
       </div>
       <div class="table-wrap"><table class="lad-table">
@@ -453,7 +452,7 @@ button{font:inherit;cursor:pointer}
   <main id="energy" hidden>
     <section class="ledger">
       <h2 class="lad-title">Energy gap analysis</h2>
-      <p class="lad-intro">Front-month futures prices, all converted to <em>USD per barrel</em> so each pair is comparable (gallons × 42, tonnes of gasoil ÷ 7.45). The gap is the first price minus the second. The gap line is black within ±2σ of its average for the selected period, pink between 2σ and 3σ, and red beyond 3σ.</p>
+      <p class="lad-intro">Front-month futures prices, all converted to <em>USD per barrel</em> so each pair is comparable (gallons × 42, tonnes of gasoil ÷ 7.45). The gap is the first price minus the second. The gap line is black; days more than 2σ from the period average are marked with pink points, and more than 3σ with red points.</p>
       <div class="lad-inputs lad-first">
         <label><span>Start date</span><input type="date" id="eStart"></label>
         <label><span>Quick range</span><select id="eQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="all">All data</option></select></label>
@@ -518,10 +517,6 @@ button{font:inherit;cursor:pointer}
 (function(){
 "use strict";
 const $ = id => document.getElementById(id);
-const CUR = ["SGD","USD","EUR","GBP","AUD","MYR","INR","JPY","CNY","HKD","CAD"];
-CUR.forEach(c=>{ const o=document.createElement("option"); o.value=c; o.textContent=c; $("currency").appendChild(o); });
-try{ const c=localStorage.getItem("finmon-currency"); if(CUR.includes(c)) $("currency").value=c; }catch(e){}
-$("currency").addEventListener("change",()=>{ try{ localStorage.setItem("finmon-currency",$("currency").value); }catch(e){} });
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
   ["ladder","short","gap","energy"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
@@ -542,8 +537,7 @@ const ids = ["lSp","lD","lI","lM","lL","lMin","lP0","lMode","lRange","lLiq"];
 let chart = null;
 
 function fmt(n, dp){
-  const cur = $("currency").value || "SGD";
-  try{ return new Intl.NumberFormat("en-US",{style:"currency",currency:cur,maximumFractionDigits:dp??0,minimumFractionDigits:dp??0}).format(n); }
+  try{ return new Intl.NumberFormat("en-US",{maximumFractionDigits:dp??0,minimumFractionDigits:dp??0}).format(n); }
   catch(e){ return cur+" "+(+n).toFixed(dp??0); }
 }
 const sgn = n => (n>0?"+":n<0?"−":"") + fmt(Math.abs(n));
@@ -650,7 +644,6 @@ function render(){
   else if(+sl.value<xMin||+sl.value>xMax) sl.value = be!==null ? Math.min(xMax,Math.max(xMin,xOf(p,Pt,be))) : xMin;
   const xs=+sl.value, Pf=finalPrice(p,Pt,xs);
   $("lSelV").textContent = `${xLabel(p,xs)} (price ${price(Pf)})`;
-  document.querySelectorAll(".curcode").forEach(e=>e.textContent=$("currency").value||"SGD");
   const body=$("lBody"); body.innerHTML="";
   if(!tr.length){ const r=document.createElement("tr"); r.innerHTML=`<td colspan="14" class="empty">The bottom never reaches the first buy level s, so nothing is bought. Lower s or deepen d<sub>min</sub>.</td>`; body.appendChild(r); }
   let tot=0;
@@ -702,7 +695,6 @@ $("lSp").addEventListener("blur",()=>{ if(lAuto) render(); });
 ids.forEach(i=>$(i).addEventListener("input",render));
 $("lMode").addEventListener("change",render); $("lLiq").addEventListener("change",render);
 $("lSel").addEventListener("input",()=>{ const sl=$("lSel"); pinMax = +sl.value >= +sl.max - 1e-9; render(); });
-$("currency").addEventListener("change",render);
 const mq = window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} render(); });
 render();
 })();
@@ -718,8 +710,7 @@ let sAuto = true; // s follows 100 + d until the user types their own value
 const ids = ["sSp","sD","sI","sM","sL","sMax","sP0","sMode","sRange","sLiq"];
 let chart = null;
 function fmt(n){
-  const cur = $("currency").value || "SGD";
-  try{ return new Intl.NumberFormat("en-US",{style:"currency",currency:cur,maximumFractionDigits:0}).format(n); }
+  try{ return new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(n); }
   catch(e){ return cur+" "+(+n).toFixed(0); }
 }
 const sgn = n => (n>0?"+":n<0?"−":"") + fmt(Math.abs(n));
@@ -859,7 +850,6 @@ $("sSp").addEventListener("blur",()=>{ if(sAuto) render(); });
 ids.forEach(i=>$(i).addEventListener("input",render));
 $("sMode").addEventListener("change",render); $("sLiq").addEventListener("change",render);
 $("sSel").addEventListener("input",render);
-$("currency").addEventListener("change",render);
 // Chart.js needs a visible canvas to size; redraw when the tab is opened
 document.querySelectorAll('.tabs button[data-view="short"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} requestAnimationFrame(render); }));
 const mq = window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} render(); });
@@ -1185,14 +1175,16 @@ function renderPair(p,i,sIdx){
   const tA=(D.meta[p.a]||{}).ticker||p.a, tB=(D.meta[p.b]||{}).ticker||p.b;
   const colOf=z=>{ const b=band(z); return b==="red"?red:b==="pink"?PINK:ink; };
   const x0=ts[s0], x1=ts[ts.length-1], hl=(y,label,color,dash,w)=>({ label, data:[{x:x0,y},{x:x1,y}], parsing:false, yAxisID:"y", borderColor:color, borderWidth:w, borderDash:dash, pointRadius:0, fill:false, isRef:true });
-  const ds=[{ label:`Gap ${tA} − ${tB}`, data:pG, parsing:false, yAxisID:"y", borderWidth:2.2, pointRadius:0, tension:0, borderColor:ink,
-    segment:{ borderColor:c=>colOf(zOf((c.p0.parsed.y+c.p1.parsed.y)/2)) }, fill:false },
+  const ds=[{ label:`Gap ${tA} − ${tB}`, data:pG, parsing:false, yAxisID:"y", borderWidth:2, tension:0, borderColor:ink, fill:false,
+    pointRadius:c=>{ const v=c.raw&&c.raw.y; return v==null||band(zOf(v))==="in"?0:2.6; },
+    pointHoverRadius:c=>{ const v=c.raw&&c.raw.y; return v==null||band(zOf(v))==="in"?3:4.5; },
+    pointBackgroundColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderWidth:0 },
     hl(avg,"Average gap",muted,[],1),
     hl(avg+2*sd,"±2σ",PINK,[6,4],1.2), hl(avg-2*sd,"±2σ",PINK,[6,4],1.2),
     hl(avg+3*sd,"±3σ",red,[3,3],1.2),  hl(avg-3*sd,"±3σ",red,[3,3],1.2)];
   if(showP){
-    ds.push({ label:`${nameOf(p.a)} (${tA})`, data:pA, parsing:false, yAxisID:"y2", borderColor:CA, borderWidth:1.4, pointRadius:0, fill:false });
-    ds.push({ label:`${nameOf(p.b)} (${tB})`, data:pB, parsing:false, yAxisID:"y2", borderColor:CB, borderWidth:1.4, pointRadius:0, borderDash:[5,4], fill:false });
+    ds.push({ label:`${nameOf(p.a)} (${tA})`, data:pA, parsing:false, yAxisID:"y2", borderColor:CA, borderWidth:1.4, pointRadius:0, borderDash:[7,4], fill:false });
+    ds.push({ label:`${nameOf(p.b)} (${tB})`, data:pB, parsing:false, yAxisID:"y2", borderColor:CB, borderWidth:1.4, pointRadius:0, borderDash:[3,3], fill:false });
   }
   const long=(ts[ts.length-1]-ts[s0])>3*365*864e5;
   const opts={ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"nearest",axis:"x",intersect:false},

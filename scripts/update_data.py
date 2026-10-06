@@ -106,6 +106,37 @@ def load_existing(path):
         return {}
 
 
+# When each market's day is final: (time zone, local hour after which today's bar is complete)
+CLOSE_AT = {
+    "AUS200": ("Australia/Sydney", 16.5), "JPN225": ("Asia/Tokyo", 15.75), "HK50": ("Asia/Hong_Kong", 16.5),
+    "UK100": ("Europe/London", 17.0), "GER40": ("Europe/Berlin", 18.0), "FRA40": ("Europe/Paris", 18.0),
+    "ITA40": ("Europe/Rome", 18.0), "ESP35": ("Europe/Madrid", 18.0),
+    "US30": ("America/New_York", 16.5), "US100": ("America/New_York", 16.5), "US500": ("America/New_York", 16.5),
+    "US2000": ("America/New_York", 16.5), "CAN60": ("America/Toronto", 16.5),
+    # CME energy futures: trade date ends at 17:00 New York; the 18:00 restart belongs to the next trade date
+    "BRENT": ("America/New_York", 17.0), "WTI": ("America/New_York", 17.0),
+    "HO": ("America/New_York", 17.0), "RB": ("America/New_York", 17.0), "GO": ("Europe/London", 23.0),
+}
+
+
+def drop_unfinished(key, s, now):
+    """Remove bars for trading days that have not closed yet (intraday values)."""
+    if key not in CLOSE_AT or s.empty:
+        return s
+    from zoneinfo import ZoneInfo
+    tz, hour = CLOSE_AT[key]
+    local = now.astimezone(ZoneInfo(tz))
+    last_done = pd.Timestamp(local.date())
+    if local.hour + local.minute / 60 < hour:
+        last_done -= pd.Timedelta(days=1)
+    if key in ("BRENT", "WTI", "HO", "RB") and local.hour >= 18:
+        last_done = pd.Timestamp(local.date())  # evening session is tomorrow's trade date
+    cut = s[s.index > last_done]
+    if len(cut):
+        print(f"  {key}: dropped {len(cut)} unfinished bar(s) after {last_done:%Y-%m-%d}")
+    return s[s.index <= last_done]
+
+
 def build(closes):
     """closes: {key: Series}. Returns (weekday calendar, forward-filled DataFrame on it)."""
     first = min(s.index.min() for s in closes.values())
@@ -134,6 +165,7 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
             else:
                 print(f"  {key}: download failed and there is no previous data")
             continue
+        s = drop_unfinished(key, s, now)
         closes[key] = s * factor
         meta[key] = {"name": name, "ticker": used, "substitute": SUBSTITUTE.get(used, ""),
                      "first": s.index.min().strftime("%Y-%m-%d"),
@@ -167,13 +199,13 @@ SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
 
 def plan(schedule, ny_now):
     """Decide what this run downloads.
-    Indices: every 05:15 SGT run. Energy: only inside the NYMEX daily break (17:00-18:00 New York),
-    which is 05:15 SGT when the US is on summer time and 06:15 SGT in winter.
-    Manual runs and pushes (no schedule) download both."""
+    Indices: the 05:15 SGT run (and manual runs). Energy: every run. GitHub often starts scheduled
+    runs late (sometimes hours), so nothing depends on the exact start time: unfinished trading days
+    are dropped by drop_unfinished(). In US winter the 05:15 run is before the 17:00 New York close,
+    so the 06:15 run picks up that day's energy prices."""
     if not schedule:
         return True, True
-    in_break = ny_now.hour == 17
-    return schedule == SCHED_INDEX, in_break
+    return schedule == SCHED_INDEX, True
 
 
 def main():
@@ -186,7 +218,7 @@ def main():
     ny = now.astimezone(ZoneInfo("America/New_York"))
     do_idx, do_energy = plan(schedule, ny)
     print(f"Run: {'schedule ' + schedule if schedule else 'manual/push'}; New York time {ny:%Y-%m-%d %H:%M %Z}. "
-          f"Indices: {'yes' if do_idx else 'skip'}. Energy: {'yes' if do_energy else 'skip (outside the 17:00-18:00 New York break)'}.")
+          f"Indices: {'yes' if do_idx else 'skip'}. Energy: {'yes' if do_energy else 'skip'}.")
     print()
 
     failed_idx = []

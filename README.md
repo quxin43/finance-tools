@@ -38,7 +38,7 @@ Saved in `data/energy.json`. Front-month series can jump on contract roll dates.
 - **Calendar:** every weekday (Monday to Friday).
 - **Missing dates** (holidays, or a market that hasn't reported yet): filled with the previous date's close, so that day counts as 0% for that index.
 - **Failed download:** that index keeps its previous data, and the page shows a note.
-- **Timing:** two scheduled runs. 05:15 SGT (21:15 UTC) downloads the indices every day. The energy futures are downloaded inside the NYMEX daily break (17:00–18:00 New York): by the 05:15 SGT run when the US is on summer time, and by the 06:15 SGT run (22:15 UTC) in winter. The script checks New York time itself, so daylight-saving changes are handled automatically. Manual runs download everything. Each run re-downloads the full history, so a late or skipped day is corrected by the next run.
+- **Timing:** two scheduled runs, 05:15 SGT (indices and energy) and 06:15 SGT (energy). GitHub often starts scheduled runs late, sometimes by hours, so the script doesn't rely on the start time: it drops any trading day that hasn't closed yet in that market's own time zone. A late run therefore still saves only final closes. In US winter the 05:15 run is before the New York energy close, so the 06:15 run adds that day. Manual runs download everything.
 
 ## One-time setup (about 15 minutes)
 

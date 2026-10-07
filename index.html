@@ -183,6 +183,23 @@ button{font:inherit;cursor:pointer}
 .chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font:600 .82rem "Public Sans",system-ui,sans-serif}
 .chip[aria-pressed="true"]{background:var(--green-soft);color:var(--green);border-color:var(--green)}
 .chip:hover{border-color:var(--green)}
+.pair-wrap{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.pair-table{width:100%;border-collapse:collapse;font-size:.84rem;white-space:nowrap}
+.pair-table th{position:sticky;top:0;background:var(--sheet);z-index:1;text-align:right;vertical-align:bottom;font-weight:600;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line);line-height:1.25}
+.pair-table th button{all:unset;cursor:pointer;display:inline-block;text-align:right}
+.pair-table th button:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+.pair-table th[aria-sort="descending"] button::after{content:" ▼";font-size:.7em}
+.pair-table th[aria-sort="ascending"] button::after{content:" ▲";font-size:.7em}
+.pair-table th[aria-sort="descending"],.pair-table th[aria-sort="ascending"]{color:var(--ink)}
+.pair-table td{text-align:right;padding:6px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.pair-table .txt{text-align:left}
+.pair-table td.txt{font-weight:600}
+.pair-table td.pp{color:var(--green)} .pair-table td.pn{color:var(--red)}
+.pair-table tbody tr{cursor:pointer}
+.pair-table tbody tr:hover td{background:var(--paper)}
+.pair-table tbody tr.sel td{background:var(--green-soft)}
+.pair-table td.empty{text-align:center;color:var(--muted);font-weight:400;cursor:default}
+.toptag{font:600 .68rem "Public Sans",sans-serif;color:var(--green);border:1px solid var(--green);border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:1px}
 [hidden]{display:none!important}
 @media (max-width:520px){
   .totals b{font-size:1.1rem}
@@ -325,6 +342,7 @@ button{font:inherit;cursor:pointer}
         <label><span>Index A</span><select id="gA"></select></label>
         <label><span>Index B</span><select id="gB"></select></label>
         <label><span>&nbsp;</span><button class="ghost" id="gAuto" type="button" title="A follows the best index and B the worst whenever the start date changes">Use best vs worst</button></label>
+        <label><span>&nbsp;</span><button class="ghost" id="gTop" type="button" title="A and B follow the pair with the highest current ÷ max drawdown in the pair table whenever the start date changes">Use top drawdown pair</button></label>
       </div>
       <div class="lad-inputs">
         <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B on the gap chart</label>
@@ -357,6 +375,28 @@ button{font:inherit;cursor:pointer}
       <div id="gAllBody">
         <div class="chart-box tall"><canvas id="gAllChart" role="img" aria-label="Accumulated gain/loss of every index by date"></canvas></div>
         <p class="hint lad-note" id="gAllNote">Click a name in the legend to hide or show that index.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="txhead">
+        <h3 id="gPTitle">Index pairs with a positive gap</h3>
+        <button class="ghost" id="gPToggle" type="button" aria-expanded="true" aria-controls="gPBody">Hide table</button>
+      </div>
+      <div id="gPBody">
+        <div class="table-wrap pair-wrap"><table class="pair-table">
+          <thead><tr>
+            <th class="txt">Index A</th><th class="txt">Index B</th>
+            <th data-k="a" aria-sort="none"><button type="button">Accumulated A</button></th>
+            <th data-k="b" aria-sort="none"><button type="button">Accumulated B</button></th>
+            <th data-k="g" aria-sort="none"><button type="button">Gap A − B<br>(last date)</button></th>
+            <th data-k="dd" aria-sort="none"><button type="button">Max drawdown<br>of A − B</button></th>
+            <th data-k="cd" aria-sort="none"><button type="button">Current drawdown<br>of A − B</button></th>
+            <th data-k="r" aria-sort="none"><button type="button">Current ÷ max<br>drawdown</button></th>
+          </tr></thead>
+          <tbody id="gPRows"></tbody>
+        </table></div>
+        <p class="hint lad-note" id="gPNote">Click a column heading to sort. Click a row to show that pair in the gap chart below.</p>
       </div>
     </section>
 
@@ -865,7 +905,7 @@ const DASHES = [[], [7,4], [2,3], [10,3,2,3]];                    // solid, dash
 const SHAPES = ["circle","triangle","rect","rectRot","crossRot","star","rectRounded"];
 const PALETTE = ["#2F6B4F","#B8892B","#3E6C8F","#8E5B8C","#B9653A","#6E9A78","#A44A4A","#5B6FB5","#C2A13A","#2E8C8C","#9C6B3E","#7A4FA0","#5F7F2E"];
 let D = null, chart = null, allChart = null, dates = [], ts = [], keys = [];
-let auto = true, showAll = true, hiddenKeys = new Set();
+let auto = true, showAll = true, hiddenKeys = new Set(), showTbl = true, sortK = "r", sortD = -1, pairs = [];
 const GROUPS = { US:["US30","US100","US500","US2000"], EU:["UK100","GER40","FRA40","ITA40","ESP35"], OT:["AUS200","CAN60","HK50","JPN225"] };
 
 const pct = (n,dp=2) => (n>0?"+":n<0?"−":"") + Math.abs(n).toFixed(dp) + "%";
@@ -889,12 +929,12 @@ async function load(){
   try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
     if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B;
     if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick;
-    $("gShowAB").checked=o.ab!==false; auto=o.auto!==false; showAll=o.all!==false; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
+    $("gShowAB").checked=o.ab!==false; auto = o.auto==="dd" ? "dd" : o.auto!==false; showAll=o.all!==false; showTbl=o.tbl!==false; if(o.sk) sortK=o.sk; if(o.sd) sortD=o.sd; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
   setAllVisible(showAll);
   syncGroupBtns();
   render();
 }
-function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,auto,all:showAll,hid:[...hiddenKeys]})); }catch(e){} }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,auto,all:showAll,hid:[...hiddenKeys],tbl:showTbl,sk:sortK,sd:sortD})); }catch(e){} }
 
 function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
 function applyQuick(minIdx, allIdx){
@@ -934,12 +974,51 @@ function render(){
   const best=ranked[0], worst=ranked[ranked.length-1];
   const showRank=(id,r)=>{ $(id).textContent = r ? `${r[0]} ${pct(r[1])}` : "—"; $(id).title = r ? nameOf(r[0]) : ""; $(id).className = r ? (r[1]>=0?"pos":"neg") : ""; };
   showRank("gBest",best); showRank("gWorst",worst);
-  if(auto && ranked.length>=2){ $("gA").value=best[0]; $("gB").value=worst[0]; }
-  $("gAuto").disabled = auto && !!best && $("gA").value===best[0] && $("gB").value===worst[0];
+  pairs = computePairs(acc, ranked.map(r=>r[0]));
+  const top = topRatio();
+  if(auto===true && ranked.length>=2){ $("gA").value=best[0]; $("gB").value=worst[0]; }
+  if(auto==="dd" && top){ $("gA").value=top.A; $("gB").value=top.B; }
+  $("gAuto").disabled = auto===true && !!best && $("gA").value===best[0] && $("gB").value===worst[0];
+  $("gTop").disabled = auto==="dd" && !!top && $("gA").value===top.A && $("gB").value===top.B;
   save();
 
   renderAll(acc, ranked, missing, s0);
+  renderTable(s0, missing);
   renderPair(s0);
+}
+
+// every ordered pair (A, B) of indices with data on the start date whose gap on the last date is positive
+function computePairs(acc, ks){
+  const out=[];
+  for(const a of ks) for(const b of ks){
+    if(a===b) continue;
+    const xa=acc[a], xb=acc[b], n=xa.length;
+    const g=xa[n-1]-xb[n-1];
+    if(!(g>0)) continue;
+    let peak=0, dd=0;
+    for(let j=0;j<n;j++){ const v=xa[j]-xb[j]; if(v>=peak) peak=v; else if(peak-v>dd) dd=peak-v; }
+    const cd=peak-g;
+    out.push({A:a, B:b, a:xa[n-1], b:xb[n-1], g, dd, cd, r: dd>0 ? cd/dd*100 : null});
+  }
+  return out;
+}
+function topRatio(){ let t=null; pairs.forEach(p=>{ if(p.r!=null && (!t || p.r>t.r || (p.r===t.r && p.g>t.g))) t=p; }); return t; }
+
+function renderTable(s0, missing){
+  $("gPTitle").textContent = `Index pairs with a positive gap, ${fmtD(dates[s0])} to ${fmtD(dates[dates.length-1])}`;
+  $("gPBody").hidden=!showTbl; $("gPToggle").textContent = showTbl ? "Hide table" : "Show table"; $("gPToggle").setAttribute("aria-expanded", String(showTbl));
+  document.querySelectorAll(".pair-table th[data-k]").forEach(th=>th.setAttribute("aria-sort", th.dataset.k===sortK ? (sortD<0?"descending":"ascending") : "none"));
+  if(!showTbl) return;
+  const rows=[...pairs].sort((x,y)=>{ const u=x[sortK], v=y[sortK]; if(u==null&&v==null) return 0; if(u==null) return 1; if(v==null) return -1; return (u-v)*sortD || (y.g-x.g); });
+  const A=$("gA").value, B=$("gB").value, top=topRatio();
+  const c=v=>v>=0?"pp":"pn";
+  $("gPRows").innerHTML = rows.length ? rows.map(p=>`<tr data-a="${p.A}" data-b="${p.B}" class="${p.A===A&&p.B===B?"sel":""}" tabindex="0" title="Show ${nameOf(p.A)} vs ${nameOf(p.B)}">
+      <td class="txt">${p.A}${top&&p===top?' <span class="toptag">top</span>':''}</td><td class="txt">${p.B}</td>
+      <td class="${c(p.a)}">${pct(p.a)}</td><td class="${c(p.b)}">${pct(p.b)}</td><td class="pp">${pct(p.g)}</td>
+      <td class="${p.dd>0?"pn":""}">${p.dd.toFixed(2)}%</td><td>${p.cd.toFixed(2)}%</td>
+      <td>${p.r==null?"—":Math.round(p.r)+"%"}</td></tr>`).join("")
+    : `<tr><td colspan="8" class="txt empty">No pair has a positive gap in this range.</td></tr>`;
+  $("gPNote").textContent = `${rows.length} pairs. Click a column heading to sort, click a row to show that pair in the gap chart below. "—" means the gap never fell from a peak, so there's no drawdown to compare.` + (missing.length?` Not included (no data on the start date): ${missing.join(", ")}.`:"");
 }
 
 function renderAll(acc, ranked, missing, s0){
@@ -1048,6 +1127,14 @@ document.querySelectorAll(".chip[data-grp]").forEach(b=>b.addEventListener("clic
 $("gAllToggle").addEventListener("click",()=>{ setAllVisible(!showAll); save(); render(); });
 ["gA","gB"].forEach(id=>$(id).addEventListener("change",()=>{ auto=false; render(); }));
 $("gAuto").addEventListener("click",()=>{ auto=true; render(); });
+$("gTop").addEventListener("click",()=>{ auto="dd"; render(); });
+$("gPToggle").addEventListener("click",()=>{ showTbl=!showTbl; save(); render(); });
+document.querySelectorAll(".pair-table th[data-k] button").forEach(b=>b.addEventListener("click",()=>{
+  const k=b.parentElement.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=-1; } save(); render();
+}));
+const pickRow=tr=>{ if(!tr||!tr.dataset.a) return; $("gA").value=tr.dataset.a; $("gB").value=tr.dataset.b; auto=false; render(); };
+$("gPRows").addEventListener("click",e=>pickRow(e.target.closest("tr")));
+$("gPRows").addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pickRow(e.target.closest("tr")); } });
 $("gShowAB").addEventListener("change",render);
 $("gQuick").addEventListener("change",render);
 $("gStart").addEventListener("change",()=>{ $("gQuick").value=""; render(); });

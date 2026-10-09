@@ -28,9 +28,9 @@ Four tabs: **Dip ladder**, **Rally ladder**, **Index gap** and **Energy gap**. A
 | WTI | WTI crude (Texas) | CL=F | USD/bbl | as is |
 | HO | US heating oil | HO=F | USD/gal | × 42 |
 | RB | US gasoline (RBOB) | RB=F | USD/gal | × 42 |
-| GO | UK gasoil (ICE) | 7F=F, GX=F (to be confirmed) | USD/t | ÷ 7.45 |
+| GO | UK gasoil (ICE Low Sulphur Gasoil) | OilPriceAPI `GASOIL_USD` (not on Yahoo) | USD/t | ÷ 7.45 |
 
-Saved in `data/energy.json`. Front-month series can jump on contract roll dates. Negative prices are kept (WTI settled below zero in April 2020).
+Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilpriceapi.com) on the free plan (50 requests a day; each run uses 1 or 2). It needs the API key saved as the repository secret `OILPRICEAPI_KEY` (Settings → Secrets and variables → Actions). The free plan gives only the latest price, so the gasoil history starts on the first successful run and grows by one day per run; its price is the latest at run time, which can differ slightly from ICE's official settlement. Front-month series can jump on contract roll dates. Negative prices are kept (WTI settled below zero in April 2020).
 
 ## Data rules
 

@@ -5,6 +5,7 @@ Download daily closes for the 13 indices from Yahoo Finance and write data/indic
 - Calendar: every weekday (Mon-Fri) from the first available date to the latest date.
 - Gaps (holidays, missing days): filled with the previous date's close, so that day counts as 0%.
 - If a download fails, that index keeps the data already in data/indices.json.
+- Energy futures go to data/energy.json. UK gasoil comes from OilPriceAPI (needs the OILPRICEAPI_KEY secret).
 """
 import json
 import sys
@@ -46,9 +47,14 @@ ENERGY = [
     ("WTI",   "WTI crude (Texas)",    "USD/bbl", ["CL=F"],          1.0),
     ("HO",    "US heating oil",       "USD/gal", ["HO=F"],          42.0),
     ("RB",    "US gasoline (RBOB)",   "USD/gal", ["RB=F"],          42.0),
-    ("GO",    "UK gasoil (ICE)",      "USD/t",   ["7F=F", "GX=F"],  1 / 7.45),
+    ("GO",    "UK gasoil (ICE)",      "USD/t",   ["OilPriceAPI"],   1 / 7.45),
 ]
 ENERGY_MIN_ROWS = 250
+
+# UK gasoil is not on Yahoo Finance. It comes from OilPriceAPI (free plan: 50 requests/day).
+# The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
+OPA_BASE = "https://api.oilpriceapi.com/v1"
+OPA_CODES = ["GASOIL_USD", "GASOIL_FUTURES"]  # tried in order
 
 
 
@@ -106,6 +112,72 @@ def load_existing(path):
         return {}
 
 
+def opa_get(path, params, key):
+    """GET an OilPriceAPI endpoint. Returns parsed JSON or raises. Retries once on 503 (data briefly stale)."""
+    import time
+    from urllib.error import HTTPError
+    from urllib.parse import urlencode
+    from urllib.request import Request, urlopen
+    url = f"{OPA_BASE}{path}?{urlencode(params)}"
+    req = Request(url, headers={"Authorization": f"Token {key}", "Accept": "application/json",
+                                "User-Agent": "finance-tools-daily-update"})
+    for attempt in (1, 2):
+        try:
+            with urlopen(req, timeout=30) as r:
+                return json.load(r)
+        except HTTPError as e:
+            body = e.read().decode("utf-8", "replace")[:300]
+            if e.code == 503 and attempt == 1:
+                print(f"  OilPriceAPI {path}: 503, retrying in 60 s")
+                time.sleep(60)
+                continue
+            raise RuntimeError(f"HTTP {e.code}: {body}") from None
+
+
+def opa_point(data):
+    """(London trade date, price in USD/t) from a /prices/latest response, or None."""
+    from zoneinfo import ZoneInfo
+    d = data.get("data", data) if isinstance(data, dict) else {}
+    if isinstance(d.get("prices"), list) and d["prices"]:
+        d = d["prices"][0]
+    price = d.get("price")
+    when = d.get("as_of") or d.get("created_at")
+    if price is None or not when:
+        return None
+    if d.get("synthetic"):
+        print("  OilPriceAPI: value is carried forward (synthetic), not a new price; skipped")
+        return None
+    unit = str(d.get("unit") or "").lower()
+    if unit and "ton" not in unit and unit not in ("t", "mt"):
+        print(f"  OilPriceAPI: unexpected unit '{unit}'; skipped")
+        return None
+    ts = pd.Timestamp(when)
+    ts = ts.tz_localize("UTC") if ts.tzinfo is None else ts
+    day = pd.Timestamp(ts.tz_convert(ZoneInfo("Europe/London")).date())
+    return day, float(price)
+
+
+def gasoil_latest():
+    """Return (code used, Series of new raw USD/t points) or (None, None)."""
+    import os
+    key = os.environ.get("OILPRICEAPI_KEY", "").strip()
+    if not key:
+        print("  GO: OILPRICEAPI_KEY is not set (add it under Settings > Secrets and variables > Actions)")
+        return None, None
+    for code in OPA_CODES:
+        try:
+            pt = opa_point(opa_get("/prices/latest", {"by_code": code}, key))
+        except Exception as e:
+            print(f"  GO: OilPriceAPI {code}: {e}")
+            continue
+        if pt:
+            day, price = pt
+            print(f"  GO: OilPriceAPI {code} = {price} USD/t for {day:%Y-%m-%d}")
+            return code, pd.Series([price], index=[day], dtype="float64")
+        print(f"  GO: OilPriceAPI {code}: no usable price in the response")
+    return None, None
+
+
 # When each market's day is final: (time zone, local hour after which today's bar is complete)
 CLOSE_AT = {
     "AUS200": ("Australia/Sydney", 16.5), "JPN225": ("Asia/Tokyo", 15.75), "HK50": ("Asia/Hong_Kong", 16.5),
@@ -115,7 +187,7 @@ CLOSE_AT = {
     "US2000": ("America/New_York", 16.5), "CAN60": ("America/Toronto", 16.5),
     # CME energy futures: trade date ends at 17:00 New York; the 18:00 restart belongs to the next trade date
     "BRENT": ("America/New_York", 17.0), "WTI": ("America/New_York", 17.0),
-    "HO": ("America/New_York", 17.0), "RB": ("America/New_York", 17.0), "GO": ("Europe/London", 23.0),
+    "HO": ("America/New_York", 17.0), "RB": ("America/New_York", 17.0), "GO": ("Europe/London", 17.5),
 }
 
 
@@ -156,7 +228,21 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
         unit = item[2] if len(item) == 5 else ""
         factor = item[4] if len(item) == 5 else 1.0
         print(f"{key}: trying {', '.join(tickers)}")
-        used, s = download(tickers, start, end, allow_negative, min_rows)
+        if key == "GO":   # OilPriceAPI: add today's price to the history already saved
+            used, new = gasoil_latest()
+            if new is not None:
+                new = drop_unfinished(key, new, now)
+                old = existing[key][0] / factor if key in existing else pd.Series(dtype="float64")
+                s = pd.concat([old, new])
+                s = s[~s.index.duplicated(keep="last")].sort_index()
+                if s.empty:
+                    used, s = None, None
+                else:
+                    used = f"OilPriceAPI {used}"
+            else:
+                s = None
+        else:
+            used, s = download(tickers, start, end, allow_negative, min_rows)
         if s is None:
             failed.append(key)
             if key in existing:
@@ -181,7 +267,7 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
     order = [it[0] for it in items if it[0] in df.columns]
     data = {
         "generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source": "Yahoo Finance daily closes (yfinance)",
+        "source": "Yahoo Finance daily closes (yfinance)" + ("; UK gasoil from OilPriceAPI" if "GO" in order else ""),
         "dates": [d.strftime("%Y-%m-%d") for d in cal],
         "series": {k: [None if pd.isna(v) else round(float(v), digits) for v in df[k]] for k in order},
         "meta": {k: meta[k] for k in order},

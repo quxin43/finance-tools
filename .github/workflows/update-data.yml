@@ -36,6 +36,7 @@ jobs:
       - name: Download data
         env:
           SCHEDULE: ${{ github.event.schedule }}   # empty for manual runs and pushes
+          OILPRICEAPI_KEY: ${{ secrets.OILPRICEAPI_KEY }}   # UK gasoil (Settings > Secrets and variables > Actions)
         run: python scripts/update_data.py
 
       - name: Save data to the repository

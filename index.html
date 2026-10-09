@@ -1220,7 +1220,7 @@ function render(){
   save();
   const upd=new Date(D.generated).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
   const tick=Object.entries(D.meta).map(([k,m])=>`${m.name} ${m.ticker}${m.unit&&m.unit!=="USD/bbl"?` (${m.unit})`:""}`).join(", ");
-  $("eSrc").textContent=`Yahoo Finance front-month futures, updated ${upd}: ${tick}.${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")}.`:""} Weekdays with no settlement carry the previous price forward. Front-month series can jump on contract roll dates.`;
+  $("eSrc").textContent=`Front-month futures from Yahoo Finance (UK gasoil from OilPriceAPI), updated ${upd}: ${tick}.${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")}.`:""} Weekdays with no settlement carry the previous price forward. Front-month series can jump on contract roll dates.`;
   PAIRS.forEach((p,i)=>renderPair(p,i,sIdx));
 }
 
@@ -1232,7 +1232,7 @@ function renderPair(p,i,sIdx){
     const miss=[!va&&p.a,!vb&&p.b].filter(Boolean).map(nameOf).join(" and ");
     if(charts[i]){charts[i].destroy();charts[i]=null;}
     box.hidden=true; ["eVA","eVB","eVG","eVAv","eVHi","eVLo","eVSd","eVZ"].forEach(id=>{ $(id+i).textContent="—"; $(id+i).className=""; });
-    $("eN"+i).textContent=`No data for ${miss} yet. Yahoo Finance may not carry this market; the daily workflow keeps trying.`;
+    $("eN"+i).textContent=`No data for ${miss} yet. The daily workflow adds it once its download works.`;
     return;
   }
   box.hidden=false;
@@ -1255,7 +1255,8 @@ function renderPair(p,i,sIdx){
   const zL=zOf(last); $("eVZ"+i).textContent=(zL>0.005?"+":zL<-0.005?"−":"")+Math.abs(zL).toFixed(2)+"σ";
   $("eVZ"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
   $("eVG"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
-  $("eN"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
+  const few=pG.length<20;
+  $("eN"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + (few?`Only ${pG.length} day${pG.length>1?"s":""} of data so far; the average, σ and bands become meaningful after a few weeks. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
 
   const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
   const showP=$("ePrices").checked;
@@ -1263,7 +1264,7 @@ function renderPair(p,i,sIdx){
   const colOf=z=>{ const b=band(z); return b==="red"?red:b==="pink"?PINK:ink; };
   const x0=ts[s0], x1=ts[ts.length-1], hl=(y,label,color,dash,w)=>({ label, data:[{x:x0,y},{x:x1,y}], parsing:false, yAxisID:"y", borderColor:color, borderWidth:w, borderDash:dash, pointRadius:0, fill:false, isRef:true });
   const ds=[{ label:`Gap ${tA} − ${tB}`, data:pG, parsing:false, yAxisID:"y", borderWidth:2, tension:0, borderColor:ink, fill:false,
-    pointRadius:c=>{ const v=c.raw&&c.raw.y; return v==null||band(zOf(v))==="in"?0:2.6; },
+    pointRadius:c=>{ const v=c.raw&&c.raw.y; return v==null?0:few?3:band(zOf(v))==="in"?0:2.6; },
     pointHoverRadius:c=>{ const v=c.raw&&c.raw.y; return v==null||band(zOf(v))==="in"?3:4.5; },
     pointBackgroundColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderWidth:0 },
     hl(avg,"Average gap",muted,[],1),

@@ -158,29 +158,67 @@ def opa_point(data):
     return day, float(price)
 
 
-def opa_daily(resp):
-    """Daily closes from an /ohlc response (format not documented, so search it): Series raw USD/t or None."""
-    def rows(o):
-        if isinstance(o, list) and o and all(isinstance(x, dict) for x in o):
-            yield o
+DATE_KEYS = ("date", "trade_date", "trading_date", "day", "period", "timestamp", "time", "as_of")
+PRICE_KEYS = ("settlement", "settle", "close", "last_price", "price")
+MONTH_KEYS = ("contract_month", "contract", "month", "expiry_month")
+
+
+def opa_daily(resp, today):
+    """Daily closes from an /ohlc response (layout not documented). Finds every list of rows, tags each row
+    with its contract month when one is given, and stitches a front-month series: on each date the nearest
+    contract month that has a price wins. Logs the layout. Returns Series of raw USD/t, or None."""
+    lists = []   # (path, contract month of parent or None, rows)
+
+    def walk(o, path, month):
         if isinstance(o, dict):
-            for v in o.values():
-                yield from rows(v)
+            m = next((str(o[k]) for k in MONTH_KEYS if isinstance(o.get(k), (str, int))), month)
+            for k, v in o.items():
+                walk(v, f"{path}.{k}", m)
         elif isinstance(o, list):
-            for v in o:
-                yield from rows(v)
-    for rs in rows(resp):
-        pts = {}
+            if o and all(isinstance(x, dict) for x in o) and any(any(k in x for k in PRICE_KEYS) for x in o):
+                lists.append((path, month, o))
+            for i, v in enumerate(o[:500]):
+                if isinstance(v, (dict, list)):
+                    walk(v, f"{path}[{i}]", month)
+
+    walk(resp, "resp", None)
+    if isinstance(resp, dict):
+        extra = {k: resp[k] for k in ("truncated", "days_requested", "days_served", "page", "total", "next", "count") if k in resp}
+        print(f"  GO: ohlc layout: top keys {list(resp)[:12]} {extra or ''}; {len(lists)} row list(s)")
+    rows = []
+    for path, month, rs in lists:
+        pts = []
         for r in rs:
-            d = next((r[k] for k in ("date", "trade_date", "trading_date", "day", "period", "timestamp", "time") if r.get(k)), None)
-            v = next((r[k] for k in ("settlement", "settle", "close", "last_price", "price") if r.get(k) is not None), None)
+            d = next((r[k] for k in DATE_KEYS if r.get(k)), None)
+            v = next((r[k] for k in PRICE_KEYS if r.get(k) is not None), None)
+            m = next((str(r[k]) for k in MONTH_KEYS if r.get(k)), month) or ""
             try:
-                pts[pd.Timestamp(str(d)[:10])] = float(v)
+                pts.append((pd.Timestamp(str(d)[:10]), m, float(v)))
             except Exception:
                 continue
         if pts:
-            return pd.Series(pts, dtype="float64").sort_index()
-    return None
+            ds = [q[0] for q in pts]
+            print(f"    {path[:60]} month={month or '-'}: {len(pts)} rows {min(ds):%Y-%m-%d} to {max(ds):%Y-%m-%d}, "
+                  f"first row keys {list(rs[0])[:10]}")
+        rows += pts
+    if not rows:
+        return None
+    df = pd.DataFrame(rows, columns=["date", "month", "price"])
+    df = df[df["price"] > 0]
+    # front month: for each date the smallest contract month that has a price ("" = untagged, used as is)
+    df = df.sort_values(["date", "month"]).drop_duplicates("date", keep="first")
+    s = pd.Series(df["price"].values, index=pd.DatetimeIndex(df["date"]), dtype="float64").sort_index()
+    if s.empty or (today - s.index.max()).days > 10:
+        print(f"  GO: ohlc series ends {s.index.max():%Y-%m-%d}, too old; ignored")
+        return None
+    # keep only the continuous recent stretch (drop old fragments separated by a gap of over 3 weeks)
+    gaps = s.index.to_series().diff().dt.days
+    big = gaps[gaps > 21]
+    if len(big):
+        cut = big.index.max()
+        print(f"  GO: dropped {int((s.index < cut).sum())} rows before a {int(big.loc[cut])}-day gap ending {cut:%Y-%m-%d}")
+        s = s[s.index >= cut]
+    return s
 
 
 def gasoil_latest(last_saved=None):
@@ -199,7 +237,7 @@ def gasoil_latest(last_saved=None):
         except Exception as e:
             print(f"  GO: ohlc {days} days: not available: {e}")
             return None, ("HTTP 401" in str(e) or "HTTP 429" in str(e))   # bad key / quota: stop
-        daily = opa_daily(resp)
+        daily = opa_daily(resp, pd.Timestamp.now().normalize())
         if daily is None or not len(daily):
             print(f"  GO: ohlc {days} days: no daily closes in response: {json.dumps(resp)[:300]}")
             return None, False
@@ -302,6 +340,9 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
         factor = item[4] if len(item) == 5 else 1.0
         print(f"{key}: trying {', '.join(tickers)}")
         if key == "GO":   # OilPriceAPI: add today's price to the history already saved
+            if key in existing and (pd.Timestamp(now.date()) - existing[key][0].index.max()).days > 30:
+                print(f"  GO: saved history ends {existing[key][0].index.max():%Y-%m-%d}, too old; discarded")
+                del existing[key]
             used, new = gasoil_latest(existing[key][0].index.max() if key in existing else None)
             if new is not None:
                 new = drop_unfinished(key, new, now)

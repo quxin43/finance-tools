@@ -55,7 +55,7 @@ ENERGY_MIN_ROWS = 250
 # The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
 OPA_BASE = "https://api.oilpriceapi.com/v1"
 OPA_CODES = ["GASOIL_USD", "GASOIL_FUTURES"]  # tried in order
-OPA_HIST = "settlement-next-month-v2"         # changes force one full re-download of the gasoil history
+OPA_HIST = "settlement-nearest-v3"         # changes force one full re-download of the gasoil history
 OPA_MAX_DAYS, OPA_MIN_DAYS = 1825, 10         # /ohlc window limits (API maximum is 1825 days)
 
 
@@ -209,13 +209,14 @@ def opa_daily(resp, today):
         return None
     df = pd.DataFrame(rows, columns=["date", "month", "price"])
     df = df[df["price"] > 0]
-    # Contract choice per date: the next calendar month's contract (e.g. November during October), which is
-    # how OilPriceAPI's older data rolls and the same delivery month as Yahoo's HO=F and RB=F. If that one is
-    # missing, the nearest later month; failing that, the latest month available. Untagged rows are used as is.
+    # Contract choice per date: the nearest contract still trading that day (e.g. October until it expires
+    # around the 12th, then November), the same contract CMC's "Low Sulphur Gasoil - Cash" follows.
+    # A contract only has rows while it trades, so the earliest month with a settlement that day is the nearest.
+    # Months before the date's own month are never used. Untagged rows are used as is.
     per = pd.PeriodIndex(df["month"].where(df["month"].str.match(r"^\d{4}-\d{2}"), None).str[:7], freq="M")
-    target = pd.PeriodIndex(df["date"], freq="M") + 1
+    target = pd.PeriodIndex(df["date"], freq="M")
     gap = [(m - t).n if m is not pd.NaT and m == m else 0 for m, t in zip(per, target)]
-    df["rank"] = [g if g >= 0 else 1000 - g for g in gap]   # 0 = target month; later months next; earlier last
+    df["rank"] = [g if g >= 0 else 1000 - g for g in gap]   # nearest from this month on; earlier months last
     df = df.sort_values(["date", "rank"]).drop_duplicates("date", keep="first")
     s = pd.Series(df["price"].values, index=pd.DatetimeIndex(df["date"]), dtype="float64").sort_index()
     if s.empty or (today - s.index.max()).days > 10:

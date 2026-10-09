@@ -55,7 +55,7 @@ ENERGY_MIN_ROWS = 250
 # The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
 OPA_BASE = "https://api.oilpriceapi.com/v1"
 OPA_CODES = ["GASOIL_USD", "GASOIL_FUTURES"]  # tried in order
-OPA_HIST = "settlement-next-month-v1"         # changes force one full re-download of the gasoil history
+OPA_HIST = "settlement-next-month-v2"         # changes force one full re-download of the gasoil history
 OPA_MAX_DAYS, OPA_MIN_DAYS = 1825, 10         # /ohlc window limits (API maximum is 1825 days)
 
 
@@ -227,6 +227,31 @@ def opa_daily(resp, today):
     return s
 
 
+GO_MIN_USD_T = 200.0   # below this it is not a gasoil price in USD/t (OilPriceAPI's pre-2026 "gasoil" is
+                       # NY Harbor heating oil in USD/gal, and holidays can carry junk values)
+
+
+def clean_gasoil(s):
+    """Remove impossible values and one-day spikes from a raw USD/t gasoil series."""
+    bad = s[s < GO_MIN_USD_T]
+    if len(bad):
+        print(f"  GO: removed {len(bad)} values below {GO_MIN_USD_T:.0f} USD/t (wrong unit or junk), "
+              f"{bad.index.min():%Y-%m-%d} to {bad.index.max():%Y-%m-%d}")
+        s = s[s >= GO_MIN_USD_T]
+    for _ in range(3):   # a day far from both neighbours while the neighbours agree is a bad print
+        prev, nxt = s.shift(1), s.shift(-1)
+        mid = (prev + nxt) / 2
+        same_side = ((s - prev) * (s - nxt)) > 0
+        spike = same_side & ((((s / mid - 1).abs() > 0.08) & ((nxt / prev - 1).abs() < 0.05))
+                             | (((s / prev - 1).abs() > 0.15) & ((s / nxt - 1).abs() > 0.15)))
+        if not spike.any():
+            break
+        for d in s[spike].index:
+            print(f"  GO: removed spike {s[d]:.2f} on {d:%Y-%m-%d} (neighbours {prev[d]:.2f} / {nxt[d]:.2f})")
+        s = s[~spike]
+    return s
+
+
 def gasoil_latest(last_saved=None):
     """Return (code used, Series of new raw USD/t points) or (None, None).
     last_saved: date of the last gasoil price already in energy.json (None on the first run)."""
@@ -371,7 +396,7 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
                 new = drop_unfinished(key, new, now)
                 old = existing[key][0] / factor if key in existing else pd.Series(dtype="float64")
                 s = pd.concat([old, new])
-                s = s[~s.index.duplicated(keep="last")].sort_index()
+                s = clean_gasoil(s[~s.index.duplicated(keep="last")].sort_index())
                 if s.empty:
                     print("  GO: no final settlement yet; saved by a later run (after about 04:00 UTC / 12:00 SGT)")
                     used, s = None, None

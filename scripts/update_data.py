@@ -1,7 +1,7 @@
 """
 Download daily closes for the 13 indices from Yahoo Finance and write data/indices.json.
 
-- History: as far back as Yahoo has it, capped just under 30 years.
+- History: everything Yahoo has, merged with what is already saved, so history only grows.
 - Calendar: every weekday (Mon-Fri) from the first available date to the latest date.
 - Gaps (holidays, missing days): filled with the previous date's close, so that day counts as 0%.
 - If a download fails, that index keeps the data already in data/indices.json.
@@ -66,8 +66,8 @@ def download(tickers, start, end, allow_negative=False, min_rows=None):
     min_rows = MIN_ROWS if min_rows is None else min_rows
     for t in tickers:
         try:
-            df = yf.download(t, start=start, end=end, interval="1d",
-                             auto_adjust=False, progress=False, threads=False)
+            span = {"period": "max"} if start is None else {"start": start, "end": end}
+            df = yf.download(t, interval="1d", auto_adjust=False, progress=False, threads=False, **span)
         except Exception as e:
             print(f"  {t}: download error: {e}")
             continue
@@ -253,7 +253,7 @@ def gasoil_latest(last_saved=None):
     daily = None
     if last_saved is not None:
         # history already saved: only ask for the days since the last saved date, plus a buffer
-        days = min(OPA_MAX_DAYS, max(10, (pd.Timestamp.now().normalize() - last_saved).days + 7))
+        days = min(OPA_MAX_DAYS, max(10, (pd.Timestamp.now().normalize() - last_saved).days + 7))  # covers any outage
         daily, _ = ohlc(days)
     else:
         # first run: find the longest history the plan allows (bisection between a pass and a fail)
@@ -366,9 +366,6 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
             if key in existing and existing[key][1].get("hist") != OPA_HIST:
                 print("  GO: saved history was built by an older version of this script; downloading it again in full")
                 del existing[key]
-            elif key in existing and (pd.Timestamp(now.date()) - existing[key][0].index.max()).days > 30:
-                print(f"  GO: saved history ends {existing[key][0].index.max():%Y-%m-%d}, too old; discarded")
-                del existing[key]
             used, new = gasoil_latest(existing[key][0].index.max() if key in existing else None)
             if new is not None:
                 new = drop_unfinished(key, new, now)
@@ -384,6 +381,18 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
                 s = None
         else:
             used, s = download(tickers, start, end, allow_negative, min_rows)
+            if s is not None and key in existing:
+                old_s, old_m = existing[key]
+                if old_m.get("ticker") == used:   # same source: keep saved days, new values win on overlap
+                    s = drop_unfinished(key, s, now)
+                    merged = pd.concat([old_s / factor, s])
+                    merged = merged[~merged.index.duplicated(keep="last")].sort_index()
+                    kept = int((merged.index < s.index.min()).sum())
+                    if kept:
+                        print(f"  {key}: kept {kept} saved days before Yahoo's first date {s.index.min():%Y-%m-%d}")
+                    s = merged
+                else:
+                    print(f"  {key}: ticker changed ({old_m.get('ticker')} -> {used}); saved history not merged")
         if s is None:
             failed.append(key)
             if key in existing:
@@ -443,7 +452,7 @@ def main():
     import os
     now = datetime.now(timezone.utc)
     end = (now + timedelta(days=1)).date()
-    start = (pd.Timestamp(now.date()) - pd.DateOffset(years=30) + pd.Timedelta(days=2)).date()
+    start = None   # no cap: download everything Yahoo has
     schedule = os.environ.get("SCHEDULE", "").strip()
     ny = now.astimezone(ZoneInfo("America/New_York"))
     do_idx, do_energy = plan(schedule, ny)

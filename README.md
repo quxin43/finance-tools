@@ -34,7 +34,7 @@ Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilp
 
 ## Data rules
 
-- **History:** as far back as Yahoo has each index, capped just under 30 years.
+- **History:** everything Yahoo has for each series (no cap). Each run merges the new download with the history already saved in `data/`, so the history only grows: if Yahoo ever returns a shorter history, the saved older days are kept (new values win where both exist). If a series switches to a fallback ticker, its history is not mixed with the old ticker's.
 - **Calendar:** every weekday (Monday to Friday).
 - **Missing dates** (holidays, or a market that hasn't reported yet): filled with the previous date's close, so that day counts as 0% for that index.
 - **Failed download:** that index keeps its previous data, and the page shows a note.

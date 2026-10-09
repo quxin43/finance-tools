@@ -30,7 +30,7 @@ Four tabs: **Dip ladder**, **Rally ladder**, **Index gap** and **Energy gap**. A
 | RB | US gasoline (RBOB) | RB=F | USD/gal | × 42 |
 | GO | UK gasoil (ICE Low Sulphur Gasoil) | OilPriceAPI `GASOIL_USD` (not on Yahoo) | USD/t | ÷ 7.45 |
 
-Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilpriceapi.com) on the free plan (50 requests a day; each run uses 1 or 2). It needs the API key saved as the repository secret `OILPRICEAPI_KEY` (Settings → Secrets and variables → Actions). The free plan gives only the latest price, so the gasoil history starts on the first successful run and grows by one day per run; its price is the latest at run time, which can differ slightly from ICE's official settlement. Front-month series can jump on contract roll dates. Negative prices are kept (WTI settled below zero in April 2020).
+Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilpriceapi.com) on the free plan (50 requests a day; each run uses 1 or 2), using ICE's official daily settlements, from November 2023 (OilPriceAPI has no data from 12 Nov 2025 to 23 Mar 2026; that stretch is left empty). The contract used on each date is the next calendar month's (November during October), the same delivery month as HO=F and RB=F; CMC's "Cash" price follows the nearest contract instead, so in the first days of a month, before that contract expires, it can differ. ICE publishes each settlement about 03:30 UTC the next day, so gasoil is added by the 12:15 SGT run. The API key is the repository secret `OILPRICEAPI_KEY` (Settings → Secrets and variables → Actions). Front-month series can jump on contract roll dates. Negative prices are kept (WTI settled below zero in April 2020).
 
 ## Data rules
 
@@ -38,7 +38,7 @@ Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilp
 - **Calendar:** every weekday (Monday to Friday).
 - **Missing dates** (holidays, or a market that hasn't reported yet): filled with the previous date's close, so that day counts as 0% for that index.
 - **Failed download:** that index keeps its previous data, and the page shows a note.
-- **Timing:** two scheduled runs, 05:15 SGT (indices and energy) and 06:15 SGT (energy). GitHub often starts scheduled runs late, sometimes by hours, so the script doesn't rely on the start time: it drops any trading day that hasn't closed yet in that market's own time zone. A late run therefore still saves only final closes. In US winter the 05:15 run is before the New York energy close, so the 06:15 run adds that day. Manual runs download everything.
+- **Timing:** three scheduled runs: 05:15 SGT (indices and energy), 06:15 SGT (energy) and 12:15 SGT (energy, for the UK gasoil settlement). GitHub often starts scheduled runs late, sometimes by hours, so the script doesn't rely on the start time: it drops any trading day that hasn't closed yet in that market's own time zone. A late run therefore still saves only final closes. In US winter the 05:15 run is before the New York energy close, so the 06:15 run adds that day. Manual runs download everything.
 
 ## One-time setup (about 15 minutes)
 

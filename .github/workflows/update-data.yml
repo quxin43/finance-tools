@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: "15 21 * * *"  # 05:15 SGT: indices every day; energy when the US is on summer time
     - cron: "15 22 * * *"  # 06:15 SGT: energy only, when the US is on winter time
+    - cron: "15 4 * * *"   # 12:15 SGT: energy only, adds the previous day's ICE gasoil settlement
   workflow_dispatch:        # adds a "Run workflow" button for a manual update
   push:
     branches: [main]        # republish whenever you change the page

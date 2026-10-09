@@ -55,6 +55,7 @@ ENERGY_MIN_ROWS = 250
 # The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
 OPA_BASE = "https://api.oilpriceapi.com/v1"
 OPA_CODES = ["GASOIL_USD", "GASOIL_FUTURES"]  # tried in order
+OPA_HIST = "settlement-next-month-v1"         # changes force one full re-download of the gasoil history
 OPA_MAX_DAYS, OPA_MIN_DAYS = 1825, 10         # /ohlc window limits (API maximum is 1825 days)
 
 
@@ -186,17 +187,20 @@ def opa_daily(resp, today):
         extra = {k: resp[k] for k in ("truncated", "days_requested", "days_served", "page", "total", "next", "count") if k in resp}
         print(f"  GO: ohlc layout: top keys {list(resp)[:12]} {extra or ''}; {len(lists)} row list(s)")
     rows = []
-    for path, month, rs in lists:
+    for li, (path, month, rs) in enumerate(lists):
         pts = []
         for r in rs:
             d = next((r[k] for k in DATE_KEYS if r.get(k)), None)
-            v = next((r[k] for k in PRICE_KEYS if r.get(k) is not None), None)
+            if "settlement" in r:          # official ICE settlement only; a row without one yet is skipped
+                v = r["settlement"]
+            else:
+                v = next((r[k] for k in PRICE_KEYS if r.get(k) is not None), None)
             m = next((str(r[k]) for k in MONTH_KEYS if r.get(k)), month) or ""
             try:
                 pts.append((pd.Timestamp(str(d)[:10]), m, float(v)))
             except Exception:
                 continue
-        if pts:
+        if pts and (li < 2 or li == len(lists) - 1):   # log the first two and the last list only
             ds = [q[0] for q in pts]
             print(f"    {path[:60]} month={month or '-'}: {len(pts)} rows {min(ds):%Y-%m-%d} to {max(ds):%Y-%m-%d}, "
                   f"first row keys {list(rs[0])[:10]}")
@@ -231,7 +235,7 @@ def gasoil_latest(last_saved=None):
     if not key:
         print("  GO: OILPRICEAPI_KEY is not set (add it under Settings > Secrets and variables > Actions)")
         return None, None
-    got, used = [], "ice-gasoil"
+    got, used = [], "ice-gasoil settlements"
     # 1) daily closes. /ohlc takes "days" back from today (max 1825). One request returns many days.
     def ohlc(days):
         try:
@@ -271,23 +275,23 @@ def gasoil_latest(last_saved=None):
                 print(f"  GO: longest history allowed is about {ok_days} days")
     if daily is not None:
         got.append(daily)
-    # 2) latest price
-    for code in OPA_CODES:
+    # 2) fallback: the current contract list carries each contract's last settlement and its date
+    if not got:
         try:
-            pt = opa_point(opa_get("/prices/latest", {"by_code": code}, key))
+            resp = opa_get("/futures/ice-gasoil", {}, key)
+            rows = [{"trading_date": c.get("settlement_date"), "settlement": c.get("settlement"),
+                     "contract_month": c.get("contract_month")} for c in resp.get("contracts", [])]
+            daily = opa_daily({"contracts": [{"contract_month": r["contract_month"], "daily_data": [r]} for r in rows]},
+                              pd.Timestamp.now().normalize())
+            if daily is not None and len(daily):
+                print(f"  GO: contract list settlement {daily.iloc[-1]} USD/t for {daily.index[-1]:%Y-%m-%d}")
+                got.append(daily)
+                used = "ice-gasoil settlements"
         except Exception as e:
-            print(f"  GO: OilPriceAPI {code}: {e}")
-            continue
-        if pt:
-            day, price = pt
-            print(f"  GO: OilPriceAPI {code} = {price} USD/t for {day:%Y-%m-%d}")
-            got.append(pd.Series([price], index=[day], dtype="float64"))
-            used = code
-            break
-        print(f"  GO: OilPriceAPI {code}: no usable price in the response")
+            print(f"  GO: contract list not available: {e}")
     if not got:
         return None, None
-    s = pd.concat(got[::-1])   # daily settlement wins over the latest price on the same date
+    s = pd.concat(got)
     return used, s[~s.index.duplicated(keep="last")].sort_index()
 
 
@@ -309,6 +313,12 @@ def drop_unfinished(key, s, now):
     if key not in CLOSE_AT or s.empty:
         return s
     from zoneinfo import ZoneInfo
+    if key == "GO":   # ICE settlement for day D is published about 03:30 UTC on D+1
+        last_done = pd.Timestamp((now.astimezone(timezone.utc) - timedelta(hours=28)).date())
+        cut = s[s.index > last_done]
+        if len(cut):
+            print(f"  {key}: held back {len(cut)} day(s) after {last_done:%Y-%m-%d} until the official settlement is out")
+        return s[s.index <= last_done]
     tz, hour = CLOSE_AT[key]
     local = now.astimezone(ZoneInfo(tz))
     last_done = pd.Timestamp(local.date())
@@ -353,7 +363,10 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
         factor = item[4] if len(item) == 5 else 1.0
         print(f"{key}: trying {', '.join(tickers)}")
         if key == "GO":   # OilPriceAPI: add today's price to the history already saved
-            if key in existing and (pd.Timestamp(now.date()) - existing[key][0].index.max()).days > 30:
+            if key in existing and existing[key][1].get("hist") != OPA_HIST:
+                print("  GO: saved history was built by an older version of this script; downloading it again in full")
+                del existing[key]
+            elif key in existing and (pd.Timestamp(now.date()) - existing[key][0].index.max()).days > 30:
                 print(f"  GO: saved history ends {existing[key][0].index.max():%Y-%m-%d}, too old; discarded")
                 del existing[key]
             used, new = gasoil_latest(existing[key][0].index.max() if key in existing else None)
@@ -363,7 +376,7 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
                 s = pd.concat([old, new])
                 s = s[~s.index.duplicated(keep="last")].sort_index()
                 if s.empty:
-                    print("  GO: only today's unfinished price so far; it is saved by a run after the 17:30 London settlement")
+                    print("  GO: no final settlement yet; saved by a later run (after about 04:00 UTC / 12:00 SGT)")
                     used, s = None, None
                 else:
                     used = f"OilPriceAPI {used}"
@@ -386,6 +399,8 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
                      "last": s.index.max().strftime("%Y-%m-%d")}
         if unit:
             meta[key].update({"unit": unit, "factor": factor})
+        if key == "GO":
+            meta[key]["hist"] = OPA_HIST
         print(f"  {key}: {used}, {len(s)} rows, {meta[key]['first']} to {meta[key]['last']}")
 
     if not closes:
@@ -409,6 +424,7 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
 
 SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
 SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
+SCHED_ENERGY_NOON = "15 4 * * *"      # 12:15 SGT: picks up the previous day's ICE gasoil settlement
 
 
 def plan(schedule, ny_now):

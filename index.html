@@ -164,8 +164,8 @@ button{font:inherit;cursor:pointer}
 .pinkv{color:#D4537E}
 .e-totals{grid-template-columns:repeat(8,minmax(0,1fr));margin:4px 0 12px;padding-top:0;border-top:0}
 .gap-totals .dd-first{border-left:1px solid var(--line);padding-left:10px}
-.gap-totals b:not(:has(.sub))::after{content:"\00a0";display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;margin-top:2px}
-.gap-totals b .sub{display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+.gap-totals b:not(:has(.sub))::after{content:"\00a0";display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;margin-top:2px;line-height:1.3;min-height:2.6em}
+.gap-totals b .sub{display:block;font:400 .72rem "Public Sans",system-ui,sans-serif;color:var(--muted);margin-top:2px;white-space:normal;line-height:1.3;min-height:2.6em}
 @media (max-width:1000px){.gap-totals{grid-template-columns:repeat(5,minmax(0,1fr))}.gap-totals .dd-first{border-left:0;padding-left:0}}
 @media (max-width:640px){.gap-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .rank{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
@@ -334,7 +334,7 @@ button{font:inherit;cursor:pointer}
       <p class="lad-intro">Pick a start date and two indices. Each day's gain or loss is close ÷ previous close − 1. The accumulated gain/loss is the <em>sum</em> of those daily percentages from the start date to the last date (not last close ÷ start close). The charts show every index's accumulated gain/loss and the gap between A and B.</p>
       <div class="lad-inputs lad-first">
         <label><span>Start date</span><input type="date" id="gStart"></label>
-        <label><span>Quick range</span><select id="gQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="20y">20 years</option><option value="all">All (common start)</option></select></label>
+        <label><span>Quick range</span><select id="gQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="20y">20 years</option><option value="all">All (A and B)</option><option value="all13">All 13 (common start)</option></select></label>
         <div class="rank"><span>Best index</span><b id="gBest">—</b></div>
         <div class="rank"><span>Worst index</span><b id="gWorst">—</b></div>
       </div>
@@ -940,13 +940,16 @@ function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=
 function applyQuick(minIdx, allIdx){
   const q=$("gQuick").value; if(!q) return;
   const firstD=dates[minIdx];
-  if(q==="all"){ $("gStart").value=dates[allIdx]; return; }  // first date every index has data
+  if(q==="all13"){ $("gStart").value=dates[allIdx]; return; }  // first date every index has data
+  if(q==="all"){ $("gStart").value=dates[pairStart()]; return; }  // first date both A and B have data
   const last=new Date(dates[dates.length-1]+"T00:00:00"); let t=new Date(last);
   if(q==="ytd") t=new Date(last.getFullYear(),0,1);
   else { const n=parseInt(q,10); if(q.endsWith("m")) t.setMonth(t.getMonth()-n); else t.setFullYear(t.getFullYear()-n); }
   const want=iso(t);
   $("gStart").value = want<firstD ? firstD : (dates.find(d=>d>=want)||firstD);
 }
+// first date index where both selected indices (A and B) have data
+function pairStart(){ const a=firstIdx($("gA").value), b=firstIdx($("gB").value); return Math.max(a<0?0:a, b<0?0:b); }
 // accumulated series for one index from index s0 (s0 = 0%), null if the index has no close at s0
 function accum(k, s0){
   const v=D.series[k]; if(v[s0]==null) return null;
@@ -955,8 +958,9 @@ function accum(k, s0){
   return out;
 }
 
-function render(){
+function render(depth){
   if(!D) return;
+  if(typeof depth!=="number" || depth>5) depth=0;   // called from listeners with an event or a timestamp
   // start date: earliest allowed is the first date any index has data
   const firsts=keys.map(firstIdx).filter(i=>i>=0);
   const minIdx=Math.min(...firsts), allIdx=Math.max(...firsts);
@@ -980,6 +984,8 @@ function render(){
   if(auto==="dd" && top){ $("gA").value=top.A; $("gB").value=top.B; }
   $("gAuto").disabled = auto===true && !!best && $("gA").value===best[0] && $("gB").value===worst[0];
   $("gTop").disabled = auto==="dd" && !!top && $("gA").value===top.A && $("gB").value===top.B;
+  // "All (A and B)": if the automatic pair changed A or B, its own start date may differ; redo once
+  if($("gQuick").value==="all" && dates[pairStart()]!==$("gStart").value && depth<2) return render(depth+1);
   save();
 
   renderAll(acc, ranked, missing, s0);
@@ -1080,9 +1086,9 @@ function renderPair(sStart){
   set("gVMax",gMax); $("gVMax").title=fmtD(dates[iMax]);
   set("gVMin",gMin); $("gVMin").title=fmtD(dates[iMin]);
   $("gVN").textContent=String(dates.length-1-s0); $("gVN").className="";
-  const gLast=pG[pG.length-1].y, ddCur=peak-gLast, sd=d=>new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  const gLast=pG[pG.length-1].y, ddCur=peak-gLast, sd=d=>new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
   const sub=t=>`<span class="sub">${t}</span>`;
-  $("gVDD").innerHTML = ddMax.toFixed(2)+"%"+sub(ddMax>0?`${sd(dates[ddPeakI])} → ${sd(dates[ddBotI])}`:"no drawdown");
+  $("gVDD").innerHTML = ddMax.toFixed(2)+"%"+sub(ddMax>0?`${sd(dates[ddPeakI])} →<br>${sd(dates[ddBotI])}`:"no drawdown");
   $("gVDD").className = ddMax>0?"neg":""; $("gVDD").title = ddMax>0?`Peak ${fmtD(dates[ddPeakI])} → bottom ${fmtD(dates[ddBotI])}`:"";
   $("gVCD").innerHTML = ddCur.toFixed(2)+"%"+sub(`from ${sd(dates[iPeak])} peak`); $("gVCD").className=""; $("gVCD").title=`Last peak ${fmtD(dates[iPeak])}`;
   const ratio = ddMax>0 ? ddCur/ddMax*100 : null;
@@ -1208,8 +1214,9 @@ function applyQuick(minIdx){
   const want=iso(t); $("eStart").value = want<dates[minIdx] ? dates[minIdx] : (dates.find(d=>d>=want)||dates[minIdx]);
 }
 
-function render(){
+function render(depth){
   if(!D) return;
+  if(typeof depth!=="number" || depth>5) depth=0;   // called from listeners with an event or a timestamp
   const firsts=Object.keys(D.series).map(firstIdx).filter(i=>i>=0);
   const minIdx=Math.min(...firsts);
   $("eStart").min=dates[minIdx]; $("eStart").max=dates[dates.length-1];

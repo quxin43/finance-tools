@@ -55,6 +55,7 @@ ENERGY_MIN_ROWS = 250
 # The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
 OPA_BASE = "https://api.oilpriceapi.com/v1"
 OPA_CODES = ["GASOIL_USD", "GASOIL_FUTURES"]  # tried in order
+OPA_MAX_DAYS, OPA_MIN_DAYS = 1825, 10         # /ohlc window limits (API maximum is 1825 days)
 
 
 
@@ -157,13 +158,80 @@ def opa_point(data):
     return day, float(price)
 
 
-def gasoil_latest():
-    """Return (code used, Series of new raw USD/t points) or (None, None)."""
+def opa_daily(resp):
+    """Daily closes from an /ohlc response (format not documented, so search it): Series raw USD/t or None."""
+    def rows(o):
+        if isinstance(o, list) and o and all(isinstance(x, dict) for x in o):
+            yield o
+        if isinstance(o, dict):
+            for v in o.values():
+                yield from rows(v)
+        elif isinstance(o, list):
+            for v in o:
+                yield from rows(v)
+    for rs in rows(resp):
+        pts = {}
+        for r in rs:
+            d = next((r[k] for k in ("date", "trade_date", "trading_date", "day", "period", "timestamp", "time") if r.get(k)), None)
+            v = next((r[k] for k in ("settlement", "settle", "close", "last_price", "price") if r.get(k) is not None), None)
+            try:
+                pts[pd.Timestamp(str(d)[:10])] = float(v)
+            except Exception:
+                continue
+        if pts:
+            return pd.Series(pts, dtype="float64").sort_index()
+    return None
+
+
+def gasoil_latest(last_saved=None):
+    """Return (code used, Series of new raw USD/t points) or (None, None).
+    last_saved: date of the last gasoil price already in energy.json (None on the first run)."""
     import os
     key = os.environ.get("OILPRICEAPI_KEY", "").strip()
     if not key:
         print("  GO: OILPRICEAPI_KEY is not set (add it under Settings > Secrets and variables > Actions)")
         return None, None
+    got, used = [], "ice-gasoil"
+    # 1) daily closes. /ohlc takes "days" back from today (max 1825). One request returns many days.
+    def ohlc(days):
+        try:
+            resp = opa_get("/futures/ice-gasoil/ohlc", {"days": days}, key)
+        except Exception as e:
+            print(f"  GO: ohlc {days} days: not available: {e}")
+            return None, ("HTTP 401" in str(e) or "HTTP 429" in str(e))   # bad key / quota: stop
+        daily = opa_daily(resp)
+        if daily is None or not len(daily):
+            print(f"  GO: ohlc {days} days: no daily closes in response: {json.dumps(resp)[:300]}")
+            return None, False
+        print(f"  GO: ohlc {days} days: OK, {daily.index.min():%Y-%m-%d} to {daily.index.max():%Y-%m-%d} ({len(daily)} rows)")
+        return daily, False
+
+    daily = None
+    if last_saved is not None:
+        # history already saved: only ask for the days since the last saved date, plus a buffer
+        days = min(OPA_MAX_DAYS, max(10, (pd.Timestamp.now().normalize() - last_saved).days + 7))
+        daily, _ = ohlc(days)
+    else:
+        # first run: find the longest history the plan allows (bisection between a pass and a fail)
+        daily, stop = ohlc(OPA_MAX_DAYS)
+        if daily is None and not stop:
+            ok_days, ok_data = OPA_MIN_DAYS, None
+            ok_data, stop = ohlc(ok_days)
+            bad, tries = OPA_MAX_DAYS, 0
+            while ok_data is not None and not stop and bad - ok_days > 5 and tries < 10:
+                mid = (ok_days + bad) // 2
+                d, stop = ohlc(mid)
+                tries += 1
+                if d is not None:
+                    ok_days, ok_data = mid, d
+                else:
+                    bad = mid
+            daily = ok_data
+            if daily is not None:
+                print(f"  GO: longest history allowed is about {ok_days} days")
+    if daily is not None:
+        got.append(daily)
+    # 2) latest price
     for code in OPA_CODES:
         try:
             pt = opa_point(opa_get("/prices/latest", {"by_code": code}, key))
@@ -173,9 +241,14 @@ def gasoil_latest():
         if pt:
             day, price = pt
             print(f"  GO: OilPriceAPI {code} = {price} USD/t for {day:%Y-%m-%d}")
-            return code, pd.Series([price], index=[day], dtype="float64")
+            got.append(pd.Series([price], index=[day], dtype="float64"))
+            used = code
+            break
         print(f"  GO: OilPriceAPI {code}: no usable price in the response")
-    return None, None
+    if not got:
+        return None, None
+    s = pd.concat(got)   # latest price overrides the daily close of the same date
+    return used, s[~s.index.duplicated(keep="last")].sort_index()
 
 
 # When each market's day is final: (time zone, local hour after which today's bar is complete)
@@ -229,13 +302,14 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
         factor = item[4] if len(item) == 5 else 1.0
         print(f"{key}: trying {', '.join(tickers)}")
         if key == "GO":   # OilPriceAPI: add today's price to the history already saved
-            used, new = gasoil_latest()
+            used, new = gasoil_latest(existing[key][0].index.max() if key in existing else None)
             if new is not None:
                 new = drop_unfinished(key, new, now)
                 old = existing[key][0] / factor if key in existing else pd.Series(dtype="float64")
                 s = pd.concat([old, new])
                 s = s[~s.index.duplicated(keep="last")].sort_index()
                 if s.empty:
+                    print("  GO: only today's unfinished price so far; it is saved by a run after the 17:30 London settlement")
                     used, s = None, None
                 else:
                     used = f"OilPriceAPI {used}"

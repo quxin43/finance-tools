@@ -205,19 +205,21 @@ def opa_daily(resp, today):
         return None
     df = pd.DataFrame(rows, columns=["date", "month", "price"])
     df = df[df["price"] > 0]
-    # front month: for each date the smallest contract month that has a price ("" = untagged, used as is)
-    df = df.sort_values(["date", "month"]).drop_duplicates("date", keep="first")
+    # Contract choice per date: the next calendar month's contract (e.g. November during October), which is
+    # how OilPriceAPI's older data rolls and the same delivery month as Yahoo's HO=F and RB=F. If that one is
+    # missing, the nearest later month; failing that, the latest month available. Untagged rows are used as is.
+    per = pd.PeriodIndex(df["month"].where(df["month"].str.match(r"^\d{4}-\d{2}"), None).str[:7], freq="M")
+    target = pd.PeriodIndex(df["date"], freq="M") + 1
+    gap = [(m - t).n if m is not pd.NaT and m == m else 0 for m, t in zip(per, target)]
+    df["rank"] = [g if g >= 0 else 1000 - g for g in gap]   # 0 = target month; later months next; earlier last
+    df = df.sort_values(["date", "rank"]).drop_duplicates("date", keep="first")
     s = pd.Series(df["price"].values, index=pd.DatetimeIndex(df["date"]), dtype="float64").sort_index()
     if s.empty or (today - s.index.max()).days > 10:
         print(f"  GO: ohlc series ends {s.index.max():%Y-%m-%d}, too old; ignored")
         return None
-    # keep only the continuous recent stretch (drop old fragments separated by a gap of over 3 weeks)
     gaps = s.index.to_series().diff().dt.days
-    big = gaps[gaps > 21]
-    if len(big):
-        cut = big.index.max()
-        print(f"  GO: dropped {int((s.index < cut).sum())} rows before a {int(big.loc[cut])}-day gap ending {cut:%Y-%m-%d}")
-        s = s[s.index >= cut]
+    for end, g in gaps[gaps > 14].items():
+        print(f"  GO: no data for {int(g)} days before {end:%Y-%m-%d} (left empty on the chart)")
     return s
 
 
@@ -285,7 +287,7 @@ def gasoil_latest(last_saved=None):
         print(f"  GO: OilPriceAPI {code}: no usable price in the response")
     if not got:
         return None, None
-    s = pd.concat(got)   # latest price overrides the daily close of the same date
+    s = pd.concat(got[::-1])   # daily settlement wins over the latest price on the same date
     return used, s[~s.index.duplicated(keep="last")].sort_index()
 
 
@@ -320,14 +322,25 @@ def drop_unfinished(key, s, now):
     return s[s.index <= last_done]
 
 
+FILL_LIMIT = {"GO": 5}   # weekdays a price may be carried forward; longer holes in the source stay empty
+
+
 def build(closes):
     """closes: {key: Series}. Returns (weekday calendar, forward-filled DataFrame on it)."""
     first = min(s.index.min() for s in closes.values())
     last = max(s.index.max() for s in closes.values())
     cal = pd.bdate_range(first, last)  # Mon-Fri
-    df = pd.DataFrame({k: s for k, s in closes.items()})
-    df = df.reindex(df.index.union(cal)).sort_index().ffill()  # gaps take the previous close
-    return cal, df.reindex(cal)
+    cols = {}
+    for k, s in closes.items():
+        lim = FILL_LIMIT.get(k)
+        x = s.reindex(s.index.union(cal)).sort_index()
+        if lim is None:
+            x = x.ffill()                     # gaps take the previous close
+        else:
+            x = x.reindex(cal).ffill(limit=lim)
+            x[x.index > s.index.max()] = s.iloc[-1]   # the latest price still carries forward to the end
+        cols[k] = x.reindex(cal)
+    return cal, pd.DataFrame(cols)
 
 
 def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=None, digits=2):

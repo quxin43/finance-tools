@@ -1238,10 +1238,13 @@ function renderPair(p,i,sIdx){
   box.hidden=false;
   let s0=sIdx; while(s0<dates.length && (va[s0]==null||vb[s0]==null)) s0++;
   if(s0>=dates.length){ $("eN"+i).textContent="No dates where both prices exist."; return; }
-  const pA=[],pB=[],pG=[]; let sum=0,hi=-Infinity,lo=Infinity,iHi=s0,iLo=s0;
-  for(let j=s0;j<dates.length;j++){ const g=va[j]-vb[j]; pA.push({x:ts[j],y:va[j]}); pB.push({x:ts[j],y:vb[j]}); pG.push({x:ts[j],y:g}); sum+=g; if(g>hi){hi=g;iHi=j;} if(g<lo){lo=g;iLo=j;} }
-  const last=pG[pG.length-1].y, avg=sum/pG.length;
-  const sd=Math.sqrt(pG.reduce((t,q)=>t+(q.y-avg)**2,0)/pG.length);
+  const pA=[],pB=[],pG=[]; let sum=0,n=0,hi=-Infinity,lo=Infinity,iHi=s0,iLo=s0,holes=0,last=null;
+  for(let j=s0;j<dates.length;j++){
+    pA.push({x:ts[j],y:va[j]}); pB.push({x:ts[j],y:vb[j]});
+    if(va[j]==null||vb[j]==null){ pG.push({x:ts[j],y:null}); holes++; continue; }   // hole in the source data: left empty
+    const g=va[j]-vb[j]; pG.push({x:ts[j],y:g}); sum+=g; n++; last=g; if(g>hi){hi=g;iHi=j;} if(g<lo){lo=g;iLo=j;} }
+  const avg=sum/n;
+  const sd=Math.sqrt(pG.reduce((t,q)=>q.y==null?t:t+(q.y-avg)**2,0)/n);
   const zOf=g=> sd>0 ? (g-avg)/sd : 0;
   const PINK="#D4537E";
   const band=z=>{ const a=Math.abs(z); return a>3?"red":a>2?"pink":"in"; };
@@ -1255,8 +1258,8 @@ function renderPair(p,i,sIdx){
   const zL=zOf(last); $("eVZ"+i).textContent=(zL>0.005?"+":zL<-0.005?"−":"")+Math.abs(zL).toFixed(2)+"σ";
   $("eVZ"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
   $("eVG"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
-  const few=pG.length<20;
-  $("eN"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + (few?`Only ${pG.length} day${pG.length>1?"s":""} of data so far; the average, σ and bands become meaningful after a few weeks. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
+  const few=n<20;
+  $("eN"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + (few?`Only ${n} day${n>1?"s":""} of data so far; the average, σ and bands become meaningful after a few weeks. `:"") + (holes?`${holes} weekday${holes>1?"s":""} with no source data ${holes>1?"are":"is"} left empty and not counted. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
 
   const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
   const showP=$("ePrices").checked;
@@ -1283,7 +1286,8 @@ function renderPair(p,i,sIdx){
       y:{ position:"left", title:{display:true,text:"Gap (USD/bbl)",color:muted}, ticks:{color:muted}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.5:1} },
       y2:{ display:showP, position:"right", title:{display:true,text:"Price (USD/bbl)",color:muted}, ticks:{color:muted}, grid:{drawOnChartArea:false} }
     },
-    plugins:{ decimation:{enabled:true,algorithm:"lttb",samples:900},
+    spanGaps:false,
+    plugins:{ decimation:{enabled:!holes,algorithm:"lttb",samples:900},
       legend:{display:true, onClick:(e,item,leg)=>{ const ch=leg.chart, lab=item.text, vis=!ch.isDatasetVisible(item.datasetIndex); ch.data.datasets.forEach((d,k)=>{ if(d.label===lab) ch.setDatasetVisibility(k,vis); }); ch.update("none"); }, labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex}},
       tooltip:{ callbacks:{ title:it=>new Date(it[0].parsed.x).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"}),
         label:it=>`${it.dataset.label}: ${it.dataset.yAxisID==="y"?sg(it.parsed.y)+(it.dataset.isRef?"":`  (${(zOf(it.parsed.y)>=0?"+":"−")+Math.abs(zOf(it.parsed.y)).toFixed(2)}σ)`):num(it.parsed.y)}` } } } };

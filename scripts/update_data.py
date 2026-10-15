@@ -337,9 +337,17 @@ CLOSE_AT = {
 }
 
 
+LIVE_LAST_BAR = True   # keep Yahoo's latest bar even if it is still trading (a live price); earlier days are
+                       # replaced by final closes on later runs, because every run re-downloads the full history
+
+
 def drop_unfinished(key, s, now):
-    """Remove bars for trading days that have not closed yet (intraday values)."""
+    """Remove bars for trading days that have not closed yet (intraday values).
+    With LIVE_LAST_BAR, Yahoo series keep their latest (possibly live) bar; UK gasoil still waits for ICE's
+    official settlement, because OilPriceAPI repeats yesterday's settlement as a placeholder until then."""
     if key not in CLOSE_AT or s.empty:
+        return s
+    if LIVE_LAST_BAR and key != "GO":
         return s
     from zoneinfo import ZoneInfo
     if key == "GO":   # ICE settlement for day D is published about 03:30 UTC on D+1
@@ -353,12 +361,23 @@ def drop_unfinished(key, s, now):
     last_done = pd.Timestamp(local.date())
     if local.hour + local.minute / 60 < hour:
         last_done -= pd.Timedelta(days=1)
-    if key in ("BRENT", "WTI", "HO", "RB") and local.hour >= 18:
-        last_done = pd.Timestamp(local.date())  # evening session is tomorrow's trade date
     cut = s[s.index > last_done]
     if len(cut):
         print(f"  {key}: dropped {len(cut)} unfinished bar(s) after {last_done:%Y-%m-%d}")
-    return s[s.index <= last_done]
+    kept = s[s.index <= last_done]
+    if key in ("BRENT", "WTI", "HO", "RB") and len(kept) and not (s.index > kept.index[-1]).any():
+        # Yahoo keeps updating the latest daily bar with evening-session trades (from 18:00 New York) until it
+        # opens the next day's bar. So the latest bar is only trusted before 18:00 on its own date (the 17:00-18:00
+        # break gives the closing price), or while the market is shut for the weekend; otherwise it is held back
+        # and the next run, once Yahoo has a newer bar, saves the corrected value.
+        d = kept.index[-1]
+        evening = local.replace(tzinfo=None) >= (d + pd.Timedelta(hours=18)).to_pydatetime()
+        wd, h = local.weekday(), local.hour + local.minute / 60
+        weekend = (wd == 4 and h >= 17) or wd == 5 or (wd == 6 and h < 18)
+        if evening and not weekend:
+            print(f"  {key}: held back {d:%Y-%m-%d}: Yahoo is still updating it with the evening session")
+            kept = kept.iloc[:-1]
+    return kept
 
 
 FILL_LIMIT = {"GO": 5}   # weekdays a price may be carried forward; longer holes in the source stay empty
@@ -633,7 +652,7 @@ def build_curve(now):
 
 SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
 SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
-SCHED_ENERGY_NOON = "15 4 * * *"      # 12:15 SGT: picks up the previous day's ICE gasoil settlement
+SCHED_ENERGY_NOON = "15 6 * * *"      # 14:15 SGT: previous day's final Yahoo settlements and ICE gasoil settlement
 
 
 def plan(schedule, ny_now):

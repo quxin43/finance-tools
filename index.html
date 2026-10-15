@@ -1261,6 +1261,8 @@ function renderCurve(p,i){
   const px = (leg) => leg.bbl==null ? "—" : `<span title="${leg.ticker}: ${leg.native} ${leg.unit}${leg.date?`, settlement ${sd(leg.date)}`:""}">${num(leg.bbl)}${leg.date && leg.date<latest?" *":""}</span>`;
   const cls = (leg) => leg.bbl==null || (leg.date && leg.date<latest) ? "stale" : "";
   const g = r => r.gap==null ? "—" : sg(r.gap), q = r => r.ratio==null ? "—" : r.ratio.toFixed(4);
+  const kfmt = n => n==null ? "—" : n>=1e6 ? (n/1e6).toFixed(n>=1e7?0:1)+"M" : n>=1e3 ? (n/1e3).toFixed(n>=1e4?0:1)+"k" : String(n);
+  const two = (x,y,lab) => `<span title="${nameOf(p.a)} ${lab}: ${x==null?"not available":x.toLocaleString("en-US")}; ${nameOf(p.b)} ${lab}: ${y==null?"not available":y.toLocaleString("en-US")}">${kfmt(x)} / ${kfmt(y)}</span>`;
   const mark = (r,k) => (!R&&k==="gap"||R&&k==="ratio") && r[k]!=null && (r[k]===hi||r[k]===lo) ? " hi" : "";
   const dA=[...new Set(rows.map(r=>r.a.date).filter(Boolean))].sort().pop(), dB=[...new Set(rows.map(r=>r.b.date).filter(Boolean))].sort().pop();
   const on = cvShow[i];
@@ -1269,12 +1271,12 @@ function renderCurve(p,i){
     <div id="eCvB${i}"${on?"":" hidden"}>
     <div class="table-wrap"><table class="pair-table curve-table">
       <thead><tr><th class="txt">Contract</th><th>Last trading day</th><th>Days left</th>
-        <th>${nameOf(p.a)}<br>(USD/bbl)</th><th>${nameOf(p.b)}<br>(USD/bbl)</th><th>Gap ${p.a} − ${p.b}<br>(USD/bbl)</th><th>Ratio<br>${p.a} ÷ ${p.b}</th></tr></thead>
+        <th>${nameOf(p.a)}<br>(USD/bbl)</th><th>${nameOf(p.b)}<br>(USD/bbl)</th><th>Gap ${p.a} − ${p.b}<br>(USD/bbl)</th><th>Ratio<br>${p.a} ÷ ${p.b}</th><th>Volume<br>${p.a} / ${p.b}</th><th>Open interest<br>${p.a} / ${p.b}</th></tr></thead>
       <tbody>${rows.map(r=>`<tr><td class="txt">${mon(r.month)}</td><td>${sd(r.exp)}</td><td>${r.days}</td>
         <td class="${cls(r.a)}">${px(r.a)}</td><td class="${cls(r.b)}">${px(r.b)}</td>
-        <td class="${r.gap==null?"":r.gap>=0?"pp":"pn"}${mark(r,"gap")}">${g(r)}</td><td class="${mark(r,"ratio")}">${q(r)}</td></tr>`).join("")}</tbody>
+        <td class="${r.gap==null?"":r.gap>=0?"pp":"pn"}${mark(r,"gap")}">${g(r)}</td><td class="${mark(r,"ratio")}">${q(r)}</td><td>${two(r.a.vol,r.b.vol,"volume")}</td><td>${two(r.a.oi,r.b.oi,"open interest")}</td></tr>`).join("")}</tbody>
     </table></div>
-    <p class="hint lad-note">Latest settlements: ${nameOf(p.a)} ${dA?sd(dA):"—"}, ${nameOf(p.b)} ${dB?sd(dB):"—"}. * = an older settlement (no newer price for that contract). Bold = highest and lowest ${R?"ratio":"gap"} on the curve. Last trading day is approximate (exchange holidays ignored) and is the earlier of the two contracts; a new month is added when the nearest one expires. Hover a price for its ticker and native price (heating oil and gasoline in USD/gal × 42, gasoil in USD/t ÷ 7.45).</p></div>`;
+    <p class="hint lad-note">Latest settlements: ${nameOf(p.a)} ${dA?sd(dA):"—"}, ${nameOf(p.b)} ${dB?sd(dB):"—"}. * = an older settlement (no newer price for that contract). Bold = highest and lowest ${R?"ratio":"gap"} on the curve. Last trading day is approximate (exchange holidays ignored) and is the earlier of the two contracts; a new month is added when the nearest one expires. Hover a price for its ticker and native price (heating oil and gasoline in USD/gal × 42, gasoil in USD/t ÷ 7.45). Volume = contracts traded on the settlement day; open interest = contracts still open (k = thousand); hover for exact numbers. "—" = not available (OilPriceAPI gives no open interest for gasoil).</p></div>`;
 }
 
 function renderPair(p,i,sIdx){

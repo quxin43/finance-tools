@@ -508,22 +508,38 @@ def contract_expiry(rule, y, m):
 
 
 def yahoo_last_settle(ticker, key, now):
-    """(price, date) of the latest finished daily close for one Yahoo contract ticker, or (None, None)."""
+    """(price, date, volume, open interest) of the latest finished daily bar for one Yahoo contract ticker.
+    Missing values are None. Open interest comes from the ticker's quote details (one extra request)."""
     import yfinance as yf
     try:
         df = yf.download(ticker, period="1mo", interval="1d", auto_adjust=False, progress=False, threads=False)
     except Exception as e:
         print(f"    {ticker}: error {e}")
-        return None, None
+        return None, None, None, None
     if df is None or df.empty or "Close" not in df:
-        return None, None
-    close = df["Close"]
-    if isinstance(close, pd.DataFrame):
-        close = close.iloc[:, 0]
-    close = drop_unfinished(key, clean(close, allow_negative=True), now)
+        return None, None, None, None
+    def col(name):
+        c = df[name] if name in df else None
+        return c.iloc[:, 0] if isinstance(c, pd.DataFrame) else c
+    close = drop_unfinished(key, clean(col("Close"), allow_negative=True), now)
     if close.empty:
-        return None, None
-    return float(close.iloc[-1]), close.index[-1].strftime("%Y-%m-%d")
+        return None, None, None, None
+    day = close.index[-1]
+    vol = None
+    v = col("Volume")
+    if v is not None:
+        vi = pd.to_datetime(v.index)
+        v.index = (vi.tz_localize(None) if vi.tz is not None else vi).normalize()
+        if day in v.index and pd.notna(v.loc[day]):
+            vol = int(v.loc[day])
+    oi = None
+    try:
+        info = yf.Ticker(ticker).info or {}
+        x = info.get("openInterest")
+        oi = int(x) if x not in (None, "") else None
+    except Exception:
+        pass
+    return float(close.iloc[-1]), day.strftime("%Y-%m-%d"), vol, oi
 
 
 def gasoil_contract_settles(now):
@@ -541,12 +557,16 @@ def gasoil_contract_settles(now):
             if t > last_done:
                 continue
             if m not in out or t >= pd.Timestamp(out[m][1]):
-                out[m] = (float(v), t.strftime("%Y-%m-%d"))
+                vol, oi = r.get("volume"), r.get("open_interest")
+                out[m] = (float(v), t.strftime("%Y-%m-%d"),
+                          int(vol) if vol not in (None, "") else None, int(oi) if oi not in (None, "") else None)
     if not out and isinstance(OPA_LAST.get("list"), dict):     # fallback: contract list
         for c in OPA_LAST["list"].get("contracts", []):
             m, d, v = str(c.get("contract_month") or "")[:7], c.get("settlement_date"), c.get("settlement")
             if m and d and v not in (None, "") and pd.Timestamp(str(d)[:10]) <= last_done:
-                out[m] = (float(v), str(d)[:10])
+                vol, oi = c.get("volume"), c.get("open_interest")
+                out[m] = (float(v), str(d)[:10], int(vol) if vol not in (None, "") else None,
+                          int(oi) if oi not in (None, "") else None)
     return out
 
 
@@ -572,13 +592,14 @@ def build_curve(now):
                 go = gasoil_contract_settles(now)
             v = go.get(f"{y:04d}-{m:02d}")
             info = {"ticker": f"ICE gasoil {MONTH_CODE[m-1]}{y % 100:02d}", "native": v[0] if v else None,
-                    "unit": "USD/t", "date": v[1] if v else None}
+                    "unit": "USD/t", "date": v[1] if v else None, "vol": v[2] if v else None, "oi": v[3] if v else None}
         else:
             t = f"{root}{MONTH_CODE[m-1]}{y % 100:02d}.NYM"
             if t not in cache:
                 cache[t] = yahoo_last_settle(t, key, now)
-            price, date = cache[t]
-            info = {"ticker": t, "native": price, "unit": "USD/bbl" if factor == 1.0 else "USD/gal", "date": date}
+            price, date, vol, oi = cache[t]
+            info = {"ticker": t, "native": price, "unit": "USD/bbl" if factor == 1.0 else "USD/gal", "date": date,
+                    "vol": vol, "oi": oi}
         info["expiry"] = exp.strftime("%Y-%m-%d")
         info["bbl"] = None if info["native"] is None else round(info["native"] * factor, 3)
         return info

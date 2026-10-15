@@ -181,6 +181,9 @@ button{font:inherit;cursor:pointer}
 .rank b.pos{color:var(--green)} .rank b.neg{color:var(--red)}
 .chart-box.tall{height:420px}
 .chart-box.ind{height:190px;margin-top:10px}
+.ind-toggles{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:2px 0 8px}
+.ind-toggles .chk{margin:0}
+.ind-toggles .sep{margin-left:8px}
 .chart-box.ind.kdj{height:240px}
 .ind-note{margin:4px 0 14px;font:400 .8rem "Public Sans",system-ui,sans-serif;color:var(--muted)}
 @media (max-width:700px){.chart-box.tall{height:460px}}
@@ -366,10 +369,6 @@ button{font:inherit;cursor:pointer}
         <label><span>&nbsp;</span><button class="ghost" id="gAuto" type="button" title="A follows the best index and B the worst whenever the start date changes">Use best vs worst</button></label>
         <label><span>&nbsp;</span><button class="ghost" id="gTop" type="button" title="A and B follow the pair with the highest current ÷ max drawdown in the pair table whenever the start date changes">Use top drawdown pair</button></label>
       </div>
-      <div class="lad-inputs">
-        <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B on the gap chart</label>
-        <label class="chk"><input type="checkbox" id="gShowInd" checked> Show indicators of A − B: Bollinger Bands on the gap chart; MACD, RSI and KDJ below it</label>
-      </div>
       <p class="err" id="gErr" role="alert"></p>
       <div class="totals lad-totals gap-totals">
         <div><span id="gLA">Accumulated A</span><b id="gVA">—</b></div>
@@ -425,15 +424,24 @@ button{font:inherit;cursor:pointer}
 
     <section class="panel">
       <h3 id="gTitle">Accumulated gain/loss gap by date</h3>
+      <div class="ind-toggles">
+        <span class="grp-lbl">On the chart:</span>
+        <label class="chk"><input type="checkbox" id="gShowAB" checked> Accumulated A and B</label>
+        <label class="chk"><input type="checkbox" id="gShowBB" checked> Bollinger Bands</label>
+        <span class="grp-lbl sep">Below:</span>
+        <label class="chk"><input type="checkbox" id="gShowMACD" checked> MACD</label>
+        <label class="chk"><input type="checkbox" id="gShowRSI" checked> RSI</label>
+        <label class="chk"><input type="checkbox" id="gShowKDJ" checked> KDJ</label>
+      </div>
       <div class="chart-box"><canvas id="gChart" role="img" aria-label="Accumulated gain/loss gap between the two indices by date"></canvas></div>
       <div id="gInd">
         <p class="ind-note" id="gBbNote"></p>
-        <div class="chart-box ind"><canvas id="gMacd" role="img" aria-label="MACD of the gap A minus B"></canvas></div>
-        <p class="ind-note" id="gMacdNote"></p>
-        <div class="chart-box ind"><canvas id="gRsi" role="img" aria-label="RSI of the gap A minus B"></canvas></div>
-        <p class="ind-note" id="gRsiNote"></p>
-        <div class="chart-box ind kdj"><canvas id="gKdj" role="img" aria-label="KDJ of the gap A minus B"></canvas></div>
-        <p class="ind-note" id="gKdjNote"></p>
+        <div id="gMacdW"><div class="chart-box ind"><canvas id="gMacd" role="img" aria-label="MACD of the gap A minus B"></canvas></div>
+        <p class="ind-note" id="gMacdNote"></p></div>
+        <div id="gRsiW"><div class="chart-box ind"><canvas id="gRsi" role="img" aria-label="RSI of the gap A minus B"></canvas></div>
+        <p class="ind-note" id="gRsiNote"></p></div>
+        <div id="gKdjW"><div class="chart-box ind kdj"><canvas id="gKdj" role="img" aria-label="KDJ of the gap A minus B"></canvas></div>
+        <p class="ind-note" id="gKdjNote"></p></div>
       </div>
       <p class="hint lad-note" id="gSrc">Loading data…</p>
     </section>
@@ -966,12 +974,12 @@ async function load(){
   try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
     if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B;
     if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick;
-    $("gShowAB").checked=o.ab!==false; $("gShowInd").checked=o.ind!==false; auto = o.auto==="dd" ? "dd" : o.auto!==false; showAll=o.all!==false; showTbl=o.tbl!==false; if(o.sk) sortK=o.sk; if(o.sd) sortD=o.sd; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
+    $("gShowAB").checked=o.ab!==false; ["BB","MACD","RSI","KDJ"].forEach(k=>{ const v=o["i"+k]; $("gShow"+k).checked = v===undefined ? o.ind!==false : !!v; }); auto = o.auto==="dd" ? "dd" : o.auto!==false; showAll=o.all!==false; showTbl=o.tbl!==false; if(o.sk) sortK=o.sk; if(o.sd) sortD=o.sd; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
   setAllVisible(showAll);
   syncGroupBtns();
   render();
 }
-function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,ind:$("gShowInd").checked,auto,all:showAll,hid:[...hiddenKeys],tbl:showTbl,sk:sortK,sd:sortD})); }catch(e){} }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,iBB:$("gShowBB").checked,iMACD:$("gShowMACD").checked,iRSI:$("gShowRSI").checked,iKDJ:$("gShowKDJ").checked,auto,all:showAll,hid:[...hiddenKeys],tbl:showTbl,sk:sortK,sd:sortD})); }catch(e){} }
 
 function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
 function applyQuick(minIdx, allIdx){
@@ -1144,7 +1152,7 @@ function renderPair(sStart){
     ds.push({ label:`Accumulated ${A}`, data:pA, parsing:false, borderColor:cA, borderWidth:1.4, pointRadius:0, borderDash:[5,4], fill:false });
     ds.push({ label:`Accumulated ${B}`, data:pB, parsing:false, borderColor:cB, borderWidth:1.4, pointRadius:0, borderDash:[2,3], fill:false });
   }
-  const showBB = $("gShowInd").checked && A!==B;
+  const showBB = $("gShowBB").checked && A!==B;
   if(showBB){
     const {f, g}=fullGap(A, B), bb=bollinger(g, f), off=g[s0]==null?0:g[s0], BBC="#5B6FB5";   // shift so the gap starts at 0 on the start date
     const band=arr=>{ const o=[]; for(let i=s0;i<dates.length;i++) o.push({x:ts[i], y:arr[i]==null?null:arr[i]-off}); return o; };
@@ -1191,8 +1199,13 @@ function emaArr(x, from, p){
   return out;
 }
 function renderInd(A, B, s0){
-  const on=$("gShowInd").checked; $("gInd").hidden=!on;
-  if(!on || A===B){ if(macdChart){macdChart.destroy();macdChart=null;} if(rsiChart){rsiChart.destroy();rsiChart=null;} if(kdjChart){kdjChart.destroy();kdjChart=null;} if(A===B) $("gInd").hidden=true; $("gBbNote").textContent=""; return; }
+  const onM=$("gShowMACD").checked, onR=$("gShowRSI").checked, onK=$("gShowKDJ").checked, onB=$("gShowBB").checked;
+  $("gMacdW").hidden=!onM; $("gRsiW").hidden=!onR; $("gKdjW").hidden=!onK; $("gBbNote").hidden=!onB;
+  if(!onM && macdChart){ macdChart.destroy(); macdChart=null; }
+  if(!onR && rsiChart){ rsiChart.destroy(); rsiChart=null; }
+  if(!onK && kdjChart){ kdjChart.destroy(); kdjChart=null; }
+  $("gInd").hidden = A===B || !(onM||onR||onK||onB);
+  if(A===B || !(onM||onR||onK)) return;
   const n=dates.length, {f, g}=fullGap(A, B);
   if(f>=n-2) return;
   const e12=emaArr(g,f,12), e26=emaArr(g,f,26);
@@ -1255,9 +1268,9 @@ function renderInd(A, B, s0){
     + (kv>=80&&dv>=80?"; in the overbought zone above 80":kv<=20&&dv<=20?"; in the oversold zone below 20":"")
     + `. RSV = where the gap sits in its 9-day high–low range (0–100); K and D are 1/3 smoothings; J = 3K − 2D can go outside 0–100. K crossing D near 80 or 20 is the usual turn signal.`;
   if(!window.Chart) return;
-  if(kdjChart){ kdjChart.data.datasets=kDs; kdjChart.options=kOpts; kdjChart.update(); } else kdjChart=new Chart($("gKdj"),{type:"line",data:{datasets:kDs},options:kOpts});
-  if(macdChart){ macdChart.data.datasets=mDs; macdChart.options=mOpts; macdChart.update(); } else macdChart=new Chart($("gMacd"),{type:"line",data:{datasets:mDs},options:mOpts});
-  if(rsiChart){ rsiChart.data.datasets=rDs; rsiChart.options=rOpts; rsiChart.update(); } else rsiChart=new Chart($("gRsi"),{type:"line",data:{datasets:rDs},options:rOpts});
+  if(onK){ if(kdjChart){ kdjChart.data.datasets=kDs; kdjChart.options=kOpts; kdjChart.update(); } else kdjChart=new Chart($("gKdj"),{type:"line",data:{datasets:kDs},options:kOpts}); }
+  if(onM){ if(macdChart){ macdChart.data.datasets=mDs; macdChart.options=mOpts; macdChart.update(); } else macdChart=new Chart($("gMacd"),{type:"line",data:{datasets:mDs},options:mOpts}); }
+  if(onR){ if(rsiChart){ rsiChart.data.datasets=rDs; rsiChart.options=rOpts; rsiChart.update(); } else rsiChart=new Chart($("gRsi"),{type:"line",data:{datasets:rDs},options:rOpts}); }
 }
 
 function setAllVisible(v){
@@ -1286,7 +1299,7 @@ const pickRow=tr=>{ if(!tr||!tr.dataset.a) return; $("gA").value=tr.dataset.a; $
 $("gPRows").addEventListener("click",e=>pickRow(e.target.closest("tr")));
 $("gPRows").addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pickRow(e.target.closest("tr")); } });
 $("gShowAB").addEventListener("change",render);
-$("gShowInd").addEventListener("change",render);
+["gShowBB","gShowMACD","gShowRSI","gShowKDJ"].forEach(id=>$(id).addEventListener("change",render));
 $("gQuick").addEventListener("change",render);
 $("gStart").addEventListener("change",()=>{ $("gQuick").value=""; render(); });
 document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} if(macdChart){macdChart.destroy();macdChart=null;} if(rsiChart){rsiChart.destroy();rsiChart=null;} if(kdjChart){kdjChart.destroy();kdjChart=null;} requestAnimationFrame(render); }));

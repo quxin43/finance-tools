@@ -198,6 +198,11 @@ button{font:inherit;cursor:pointer}
 .pair-table td.txt{font-weight:600}
 .pair-table td.pp{color:var(--green)} .pair-table td.pn{color:var(--red)}
 .pair-table tbody tr{cursor:pointer}
+.curve-block{margin-top:14px}
+.curve-block h4{margin:0 0 6px;font:600 .95rem "Familjen Grotesk",sans-serif}
+.curve-table tbody tr{cursor:default}
+.curve-table td.hi{font-weight:700}
+.curve-table td.stale{color:var(--muted)}
 .pair-table tbody tr:hover td{background:var(--paper)}
 .pair-table tbody tr.sel td{background:var(--green-soft)}
 .pair-table td.empty{text-align:center;color:var(--muted);font-weight:400;cursor:default}
@@ -1162,7 +1167,7 @@ const PAIRS = [
   { a:"HO",    b:"GO",  title:"US heating oil − UK gasoil" },
 ];
 const CA="#378ADD", CB="#EF9F27";
-let D=null, dates=[], ts=[], charts=[], modes=["gap","gap","gap"];   // per panel: "gap" (A − B) or "ratio" (A ÷ B)
+let D=null, CV=null, dates=[], ts=[], charts=[], modes=["gap","gap","gap"], cvShow=[true,true,true];   // cvShow: curve table shown per panel   // per panel: "gap" (A − B) or "ratio" (A ÷ B)
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
 const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
@@ -1190,6 +1195,7 @@ function buildPanels(){
         <div><span id="eKZ${i}">Latest gap<br>vs average</span><b id="eVZ${i}">—</b></div>
       </div>
       <div class="chart-box" id="eBox${i}"><canvas id="eC${i}" role="img" aria-label="${p.title}: gap or ratio and prices by date"></canvas></div>
+      <div class="curve-block" id="eCv${i}"></div>
       <p class="hint lad-note" id="eN${i}"></p>`;
     host.appendChild(sec);
   });
@@ -1203,11 +1209,12 @@ async function load(){
     D=await r.json();
   }catch(e){ $("eSrc").textContent="Couldn't load the energy data (data/energy.json). It's created by the daily workflow; run it once from the Actions tab."; return; }
   dates=D.dates; ts=dates.map(d=>Date.parse(d+"T00:00:00Z"));
+  try{ const rc=await fetch("data/curve.json",{cache:"no-store"}); if(rc.ok) CV=await rc.json(); }catch(e){ CV=null; }
   $("eQuick").value="1y";
-  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(o.start) $("eStart").value=o.start; if(o.quick!==undefined) $("eQuick").value=o.quick; $("ePrices").checked=o.prices!==false; if(Array.isArray(o.modes)) modes=PAIRS.map((_,i)=>o.modes[i]==="ratio"?"ratio":"gap"); } }catch(e){}
+  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(o.start) $("eStart").value=o.start; if(o.quick!==undefined) $("eQuick").value=o.quick; $("ePrices").checked=o.prices!==false; if(Array.isArray(o.modes)) modes=PAIRS.map((_,i)=>o.modes[i]==="ratio"?"ratio":"gap"); if(Array.isArray(o.cv)) cvShow=PAIRS.map((_,i)=>o.cv[i]!==false); } }catch(e){}
   render();
 }
-function save(){ try{ localStorage.setItem(LK, JSON.stringify({start:$("eStart").value, quick:$("eQuick").value, prices:$("ePrices").checked, modes})); }catch(e){} }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({start:$("eStart").value, quick:$("eQuick").value, prices:$("ePrices").checked, modes, cv:cvShow})); }catch(e){} }
 
 function firstIdx(k){ const v=D.series[k]; if(!v) return -1; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
 function applyQuick(minIdx){
@@ -1236,7 +1243,42 @@ function render(depth){
   PAIRS.forEach((p,i)=>renderPair(p,i,sIdx));
 }
 
+// futures curve table: next 12 contract months traded by both legs, from data/curve.json
+function renderCurve(p,i){
+  const host=$("eCv"+i); if(!host) return;
+  const c = CV && CV.pairs ? CV.pairs.find(x=>x.a===p.a && x.b===p.b) : null;
+  if(!c || !c.rows || !c.rows.length){ host.innerHTML=""; return; }
+  const R = modes[i]==="ratio";
+  const mon = m => new Date(m+"-01T00:00:00Z").toLocaleDateString("en-US",{month:"short",year:"numeric",timeZone:"UTC"});
+  const sd = d => new Date(d+"T00:00:00Z").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
+  const today = Date.parse(new Date().toISOString().slice(0,10)+"T00:00:00Z");
+  const rows = c.rows.map(r=>{ const a=r.a.bbl, b=r.b.bbl, ok=a!=null && b!=null;
+    const exp = r.a.expiry<r.b.expiry ? r.a.expiry : r.b.expiry;
+    return {...r, ok, gap: ok? a-b : null, ratio: ok && b>0 ? a/b : null, exp, days: Math.round((Date.parse(exp+"T00:00:00Z")-today)/864e5)}; });
+  const key = R ? "ratio" : "gap", vals = rows.filter(r=>r[key]!=null).map(r=>r[key]);
+  const hi = vals.length ? Math.max(...vals) : null, lo = vals.length ? Math.min(...vals) : null;
+  const latest = rows.reduce((m,r)=>[r.a.date,r.b.date].reduce((x,d)=>d&&d>x?d:x,m),"");
+  const px = (leg) => leg.bbl==null ? "—" : `<span title="${leg.ticker}: ${leg.native} ${leg.unit}${leg.date?`, settlement ${sd(leg.date)}`:""}">${num(leg.bbl)}${leg.date && leg.date<latest?" *":""}</span>`;
+  const cls = (leg) => leg.bbl==null || (leg.date && leg.date<latest) ? "stale" : "";
+  const g = r => r.gap==null ? "—" : sg(r.gap), q = r => r.ratio==null ? "—" : r.ratio.toFixed(4);
+  const mark = (r,k) => (!R&&k==="gap"||R&&k==="ratio") && r[k]!=null && (r[k]===hi||r[k]===lo) ? " hi" : "";
+  const dA=[...new Set(rows.map(r=>r.a.date).filter(Boolean))].sort().pop(), dB=[...new Set(rows.map(r=>r.b.date).filter(Boolean))].sort().pop();
+  const on = cvShow[i];
+  host.innerHTML = `<div class="txhead"><h4>Futures curve: next ${rows.length} contract months</h4>
+      <button class="ghost" type="button" data-cv="${i}" aria-expanded="${on}" aria-controls="eCvB${i}">${on?"Hide table":"Show table"}</button></div>
+    <div id="eCvB${i}"${on?"":" hidden"}>
+    <div class="table-wrap"><table class="pair-table curve-table">
+      <thead><tr><th class="txt">Contract</th><th>Last trading day</th><th>Days left</th>
+        <th>${nameOf(p.a)}<br>(USD/bbl)</th><th>${nameOf(p.b)}<br>(USD/bbl)</th><th>Gap ${p.a} − ${p.b}<br>(USD/bbl)</th><th>Ratio<br>${p.a} ÷ ${p.b}</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td class="txt">${mon(r.month)}</td><td>${sd(r.exp)}</td><td>${r.days}</td>
+        <td class="${cls(r.a)}">${px(r.a)}</td><td class="${cls(r.b)}">${px(r.b)}</td>
+        <td class="${r.gap==null?"":r.gap>=0?"pp":"pn"}${mark(r,"gap")}">${g(r)}</td><td class="${mark(r,"ratio")}">${q(r)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="hint lad-note">Latest settlements: ${nameOf(p.a)} ${dA?sd(dA):"—"}, ${nameOf(p.b)} ${dB?sd(dB):"—"}. * = an older settlement (no newer price for that contract). Bold = highest and lowest ${R?"ratio":"gap"} on the curve. Last trading day is approximate (exchange holidays ignored) and is the earlier of the two contracts; a new month is added when the nearest one expires. Hover a price for its ticker and native price (heating oil and gasoline in USD/gal × 42, gasoil in USD/t ÷ 7.45).</p></div>`;
+}
+
 function renderPair(p,i,sIdx){
+  renderCurve(p,i);
   const va=D.series[p.a], vb=D.series[p.b];
   $("eLA"+i).textContent=nameOf(p.a); $("eLB"+i).textContent=nameOf(p.b);
   // Gap (A − B, USD/bbl) or Ratio (A ÷ B): every figure, band and the chart follow this choice
@@ -1322,6 +1364,8 @@ function renderPair(p,i,sIdx){
 $("eQuick").addEventListener("change",render);
 $("eStart").addEventListener("change",()=>{ $("eQuick").value=""; render(); });
 $("ePrices").addEventListener("change",render);
+$("ePanels").addEventListener("click",e=>{ const t=e.target.closest("button[data-cv]"); if(!t) return;
+  const i=+t.dataset.cv; cvShow[i]=!cvShow[i]; save(); renderCurve(PAIRS[i], i); });
 $("ePanels").addEventListener("click",e=>{ const b=e.target.closest(".e-mode button"); if(!b) return; const i=+b.dataset.i;
   if(modes[i]===b.dataset.m) return; modes[i]=b.dataset.m; render(); });
 document.querySelectorAll('.tabs button[data-view="energy"]').forEach(b=>b.addEventListener("click",()=>{ charts.forEach((c,i)=>{ if(c){c.destroy();charts[i]=null;} }); requestAnimationFrame(render); }));

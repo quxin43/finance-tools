@@ -2,6 +2,10 @@
 
 Four tabs: **Dip ladder**, **Rally ladder**, **Index gap** and **Energy gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
 
+## Peaks and bottoms panel (Index gap tab)
+
+For one index (default US500): a **peak** is a close higher than the *n* trading days before and after it, a **bottom** a close lower than them (default n = 5, adjustable). Two peaks in a row keep the higher one, two bottoms the lower, so they alternate. Each fall is annualised as **Ln = (Bn ÷ Pn − 1) × 365 ÷ days** and each rise as **Gn = (Pn+1 ÷ Bn − 1) × 365 ÷ days** (calendar days). The panel shows the price coloured by leg, a chart of Ln (red) and Gn (green) as bars across each leg's dates (clipped at ±300% a year), counts and medians for the chosen range, and the current unconfirmed leg (dashed).
+
 ## Index pool
 
 | Key | Index | Yahoo ticker |
@@ -31,6 +35,10 @@ Four tabs: **Dip ladder**, **Rally ladder**, **Index gap** and **Energy gap**. A
 | GO | UK gasoil (ICE Low Sulphur Gasoil) | OilPriceAPI `GASOIL_USD` (not on Yahoo) | USD/t | ÷ 7.45 |
 
 Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilpriceapi.com) on the free plan (50 requests a day; each run uses 1 or 2), using ICE's official daily settlements from 24 March 2026, and the history grows from there. (OilPriceAPI's older "gasoil" data turned out to be US heating oil in USD/gal, so the script rejects any value below 200 USD/t. It also removes one-day spikes: a day more than 8% away from both neighbours while they agree, or more than 15% away from both.) The contract used on each date is the nearest one still trading (for example October until it expires around 12 October, then November), the same contract CMC's "Low Sulphur Gasoil - Cash" follows. Note that HO=F and RB=F are already on the next month's contract by then, so in the first days of each month the HO − gasoil gap compares different delivery months, and it can jump when the gasoil contract rolls. ICE publishes each settlement about 03:30 UTC the next day, so gasoil is added by the 12:15 SGT run. The API key is the repository secret `OILPRICEAPI_KEY` (Settings → Secrets and variables → Actions). Front-month series can jump on contract roll dates. Negative prices are kept (WTI settled below zero in April 2020).
+
+## Futures curve tables (Energy gap tab)
+
+Under each energy chart, a table shows the next 12 contract months traded by both legs, with each month's latest settlement in USD/bbl, the gap and the ratio. Brent, WTI, heating oil and gasoline come from Yahoo's monthly NYMEX tickers (for example `HOX26.NYM` = heating oil, November 2026; month codes F G H J K M N Q U V X Z = Jan to Dec); UK gasoil comes from the OilPriceAPI data the run already downloads. The months are worked out on every run from each exchange's expiry rule, so when the nearest contract expires it drops off and a new month is added at the end. Saved in `data/curve.json` (only the latest curve; no history). The gap charts themselves still use the continuous tickers (BZ=F, CL=F, HO=F, RB=F).
 
 ## Data rules
 

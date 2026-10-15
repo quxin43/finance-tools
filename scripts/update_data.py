@@ -56,6 +56,7 @@ ENERGY_MIN_ROWS = 250
 OPA_BASE = "https://api.oilpriceapi.com/v1"
 OPA_CODES = ["GASOIL_USD", "GASOIL_FUTURES"]  # tried in order
 OPA_HIST = "settlement-nearest-v3"         # changes force one full re-download of the gasoil history
+OPA_LAST = {}                                 # latest OilPriceAPI responses, reused for the futures curve
 OPA_MAX_DAYS, OPA_MIN_DAYS = 1825, 10         # /ohlc window limits (API maximum is 1825 days)
 
 
@@ -269,6 +270,7 @@ def gasoil_latest(last_saved=None):
         except Exception as e:
             print(f"  GO: ohlc {days} days: not available: {e}")
             return None, ("HTTP 401" in str(e) or "HTTP 429" in str(e))   # bad key / quota: stop
+        OPA_LAST["resp"] = resp            # reused by the futures curve (every contract is in it)
         daily = opa_daily(resp, pd.Timestamp.now().normalize())
         if daily is None or not len(daily):
             print(f"  GO: ohlc {days} days: no daily closes in response: {json.dumps(resp)[:300]}")
@@ -305,6 +307,7 @@ def gasoil_latest(last_saved=None):
     if not got:
         try:
             resp = opa_get("/futures/ice-gasoil", {}, key)
+            OPA_LAST["list"] = resp
             rows = [{"trading_date": c.get("settlement_date"), "settlement": c.get("settlement"),
                      "contract_month": c.get("contract_month")} for c in resp.get("contracts", [])]
             daily = opa_daily({"contracts": [{"contract_month": r["contract_month"], "daily_data": [r]} for r in rows]},
@@ -457,6 +460,156 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
     return failed
 
 
+# ---------------------------------------------------------------- futures curve (next 12 contract months)
+CURVE_OUT = DATA / "curve.json"
+CURVE_MONTHS = 12
+MONTH_CODE = "FGHJKMNQUVXZ"   # Jan..Dec
+CURVE_PAIRS = [("BRENT", "WTI"), ("HO", "RB"), ("HO", "GO")]
+# Yahoo root, factor to USD/bbl, expiry rule
+CURVE_LEGS = {
+    "BRENT": ("BZ", 1.0, "brent"), "WTI": ("CL", 1.0, "wti"),
+    "HO": ("HO", 42.0, "prev_month_end"), "RB": ("RB", 42.0, "prev_month_end"),
+    "GO": (None, 1 / 7.45, "ice_gasoil"),
+}
+
+
+def _bday_back(d, n):
+    """Step back n weekdays from date d (exchange holidays ignored)."""
+    while n > 0:
+        d -= timedelta(days=1)
+        if d.weekday() < 5:
+            n -= 1
+    return d
+
+
+def _last_bday(y, m):
+    d = (pd.Timestamp(y, m, 1) + pd.offsets.MonthEnd(0)).date()
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
+def contract_expiry(rule, y, m):
+    """Approximate last trading day for delivery month (y, m); exchange holidays are ignored."""
+    py, pm = (y, m - 1) if m > 1 else (y - 1, 12)
+    if rule == "prev_month_end":            # NYMEX HO and RB: last business day of the month before
+        return _last_bday(py, pm)
+    if rule == "brent":                     # NYMEX BZ: last business day of the second month before
+        qy, qm = (py, pm - 1) if pm > 1 else (py - 1, 12)
+        return _last_bday(qy, qm)
+    if rule == "wti":                       # NYMEX CL: 3 business days before the 25th of the month before
+        d = datetime(py, pm, 25).date()
+        while d.weekday() >= 5:
+            d -= timedelta(days=1)
+        return _bday_back(d, 3)
+    if rule == "ice_gasoil":                # ICE gasoil: 2 business days before the 14th of the delivery month
+        return _bday_back(datetime(y, m, 14).date(), 2)
+    raise ValueError(rule)
+
+
+def yahoo_last_settle(ticker, key, now):
+    """(price, date) of the latest finished daily close for one Yahoo contract ticker, or (None, None)."""
+    import yfinance as yf
+    try:
+        df = yf.download(ticker, period="1mo", interval="1d", auto_adjust=False, progress=False, threads=False)
+    except Exception as e:
+        print(f"    {ticker}: error {e}")
+        return None, None
+    if df is None or df.empty or "Close" not in df:
+        return None, None
+    close = df["Close"]
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+    close = drop_unfinished(key, clean(close, allow_negative=True), now)
+    if close.empty:
+        return None, None
+    return float(close.iloc[-1]), close.index[-1].strftime("%Y-%m-%d")
+
+
+def gasoil_contract_settles(now):
+    """{'YYYY-MM': (USD/t, date)} latest final ICE gasoil settlement per contract, from this run's OilPriceAPI data."""
+    out = {}
+    last_done = pd.Timestamp((now.astimezone(timezone.utc) - timedelta(hours=28)).date())   # same rule as GO
+    resp = OPA_LAST.get("resp")
+    for c in (resp or {}).get("contracts", []) if isinstance(resp, dict) else []:
+        m = str(c.get("contract_month") or "")[:7]
+        for r in c.get("daily_data", []) or []:
+            d, v = r.get("trading_date"), r.get("settlement")
+            if not d or v in (None, ""):
+                continue
+            t = pd.Timestamp(str(d)[:10])
+            if t > last_done:
+                continue
+            if m not in out or t >= pd.Timestamp(out[m][1]):
+                out[m] = (float(v), t.strftime("%Y-%m-%d"))
+    if not out and isinstance(OPA_LAST.get("list"), dict):     # fallback: contract list
+        for c in OPA_LAST["list"].get("contracts", []):
+            m, d, v = str(c.get("contract_month") or "")[:7], c.get("settlement_date"), c.get("settlement")
+            if m and d and v not in (None, "") and pd.Timestamp(str(d)[:10]) <= last_done:
+                out[m] = (float(v), str(d)[:10])
+    return out
+
+
+def build_curve(now):
+    """Next CURVE_MONTHS delivery months traded by both legs of each pair; prices in USD/bbl."""
+    from zoneinfo import ZoneInfo
+    today = now.astimezone(ZoneInfo("America/New_York")).date()
+    months = []
+    y, m = today.year, today.month
+    for _ in range(CURVE_MONTHS + 6):
+        months.append((y, m))
+        y, m = (y, m + 1) if m < 12 else (y + 1, 1)
+    cache, go = {}, None
+
+    def leg(key, y, m):
+        nonlocal go
+        root, factor, rule = CURVE_LEGS[key]
+        exp = contract_expiry(rule, y, m)
+        if exp < today:
+            return None                                   # expired: the next month takes its place
+        if key == "GO":
+            if go is None:
+                go = gasoil_contract_settles(now)
+            v = go.get(f"{y:04d}-{m:02d}")
+            info = {"ticker": f"ICE gasoil {MONTH_CODE[m-1]}{y % 100:02d}", "native": v[0] if v else None,
+                    "unit": "USD/t", "date": v[1] if v else None}
+        else:
+            t = f"{root}{MONTH_CODE[m-1]}{y % 100:02d}.NYM"
+            if t not in cache:
+                cache[t] = yahoo_last_settle(t, key, now)
+            price, date = cache[t]
+            info = {"ticker": t, "native": price, "unit": "USD/bbl" if factor == 1.0 else "USD/gal", "date": date}
+        info["expiry"] = exp.strftime("%Y-%m-%d")
+        info["bbl"] = None if info["native"] is None else round(info["native"] * factor, 3)
+        return info
+
+    pairs = []
+    for a, b in CURVE_PAIRS:
+        rows = []
+        for (y, m) in months:
+            la = leg(a, y, m)
+            lb = leg(b, y, m)
+            if la is None or lb is None:
+                continue
+            rows.append({"month": f"{y:04d}-{m:02d}", "a": la, "b": lb})
+            if len(rows) == CURVE_MONTHS:
+                break
+        ok = sum(1 for r in rows if r["a"]["bbl"] is not None and r["b"]["bbl"] is not None)
+        print(f"  Curve {a}-{b}: {len(rows)} months ({rows[0]['month'] if rows else '-'} to {rows[-1]['month'] if rows else '-'}), "
+              f"{ok} with both prices")
+        for r in rows:
+            for side in ("a", "b"):
+                if r[side]["native"] is None:
+                    print(f"    no price for {r[side]['ticker']}")
+        pairs.append({"a": a, "b": b, "rows": rows})
+    data = {"generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "source": "Yahoo Finance monthly NYMEX contracts (BZ, CL, HO, RB); ICE gasoil from OilPriceAPI",
+            "pairs": pairs}
+    CURVE_OUT.parent.mkdir(parents=True, exist_ok=True)
+    CURVE_OUT.write_text(json.dumps(data, separators=(",", ":")))
+    print(f"Curve: wrote {CURVE_OUT.name}")
+
+
 SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
 SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
 SCHED_ENERGY_NOON = "15 4 * * *"      # 12:15 SGT: picks up the previous day's ICE gasoil settlement
@@ -493,6 +646,11 @@ def main():
     if do_energy:
         run_set("Energy", ENERGY, ENERGY_OUT, start, end, now, allow_negative=True,
                 min_rows=ENERGY_MIN_ROWS, digits=3)
+        print()
+        try:
+            build_curve(now)
+        except Exception as e:                      # the curve table is optional; never fail the run
+            print(f"Curve: failed ({e}); previous curve.json kept")
 
     if do_idx and len(failed_idx) == len(INDICES):
         print("No index downloaded.")

@@ -61,6 +61,21 @@ Under each energy chart, a table shows the next 12 contract months traded by bot
 
 After that, it updates itself every day at 05:15 SGT. You don't need to do anything.
 
+## "Update data now" button (one-click update)
+
+The button at the top right starts the GitHub update straight away, waits for it (about 3 minutes) and reloads the page. It needs a GitHub token saved in your browser:
+
+1. GitHub → your profile picture → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Name it (for example "finance-tools update"), pick an expiry, and under **Repository access** choose **Only select repositories → finance-tools**.
+3. Under **Permissions → Repository permissions**, set **Actions** to **Read and write** (Metadata read-only is added automatically). Nothing else.
+4. Generate, copy the token, then on the site click **⚙** next to the button and paste it.
+
+The token is kept only in that browser (localStorage) and sent only to api.github.com. It can do nothing except start and read workflow runs of this repository. Use ⚙ and leave it empty to remove it. Without a token, the button opens the Actions page, where you can click **Run workflow** yourself.
+
+## Indicators on the Index gap tab
+
+Below the A − B chart (checkbox "Show indicators"): **Bollinger Bands** (20-day average ± 2σ, drawn on the gap chart, with %B), **MACD** (12, 26, 9), **RSI** (14, Wilder) and **KDJ** (9, 3, 3, close-only). All are calculated on the gap A − B over the pair's whole common history, so they don't depend on the start date.
+
 ## Good to know
 
 - **Manual update:** Actions → Update index data and publish site → Run workflow.

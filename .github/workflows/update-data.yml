@@ -2,9 +2,11 @@ name: Update index data and publish site
 
 on:
   schedule:
-    - cron: "15 21 * * *"  # 05:15 SGT: indices every day; energy when the US is on summer time
-    - cron: "15 22 * * *"  # 06:15 SGT: energy only, when the US is on winter time
-    - cron: "15 6 * * *"   # 14:15 SGT: energy only, final settlements (Yahoo has closed the day; ICE gasoil published)
+    - cron: "15 21 * * *"  # 05:15 SGT: after the US close (summer time)
+    - cron: "15 22 * * *"  # 06:15 SGT: after the US close (winter time)
+    - cron: "15 6 * * *"   # 14:15 SGT: final settlements for the previous day (Yahoo has closed the day; ICE gasoil published)
+    - cron: "45 13 * * *"  # 21:45 SGT: US and European markets both open (runs in US summer time only)
+    - cron: "45 14 * * *"  # 22:45 SGT: US and European markets both open (runs in US winter time only)
   workflow_dispatch:        # adds a "Run workflow" button for a manual update
   push:
     branches: [main]        # republish whenever you change the page

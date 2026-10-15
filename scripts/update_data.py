@@ -341,6 +341,23 @@ LIVE_LAST_BAR = True   # keep Yahoo's latest bar even if it is still trading (a 
                        # replaced by final closes on later runs, because every run re-downloads the full history
 
 
+def is_live(key, last_day, now):
+    """True if the series' latest bar is still a live price at the time of this run (its market is trading)."""
+    if key not in CLOSE_AT or key == "GO":
+        return False
+    from zoneinfo import ZoneInfo
+    tz, close_h = CLOSE_AT[key]
+    local = now.astimezone(ZoneInfo(tz))
+    h, wd, d = local.hour + local.minute / 60, local.weekday(), pd.Timestamp(last_day).date()
+    if key in ("BRENT", "WTI", "HO", "RB"):
+        # NYMEX trades Sunday 18:00 to Friday 17:00 New York with a daily 17:00-18:00 break; while it is open,
+        # Yahoo keeps updating the latest bar (also with the evening session) until it opens the next day's bar
+        weekend = (wd == 4 and h >= 17) or wd == 5 or (wd == 6 and h < 18)
+        in_break = 17 <= h < 18
+        return not weekend and not in_break and (local.date() - d).days <= 1
+    return local.date() == d and wd < 5 and h < close_h   # an index is live on its own trading day before the close
+
+
 def drop_unfinished(key, s, now):
     """Remove bars for trading days that have not closed yet (intraday values).
     With LIVE_LAST_BAR, Yahoo series keep their latest (possibly live) bar; UK gasoil still waits for ICE's
@@ -458,7 +475,9 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
             meta[key].update({"unit": unit, "factor": factor})
         if key == "GO":
             meta[key]["hist"] = OPA_HIST
-        print(f"  {key}: {used}, {len(s)} rows, {meta[key]['first']} to {meta[key]['last']}")
+        meta[key]["live"] = is_live(key, s.index.max(), now)
+        print(f"  {key}: {used}, {len(s)} rows, {meta[key]['first']} to {meta[key]['last']}"
+              + ("  (latest is a live price)" if meta[key]["live"] else ""))
 
     if not closes:
         print(f"{label}: nothing downloaded and no previous data; file not written.")
@@ -652,18 +671,23 @@ def build_curve(now):
 
 SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
 SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
+SCHED_OVERLAP_SUMMER = "45 13 * * *"  # 21:45 SGT: US and European markets both open (US summer time)
+SCHED_OVERLAP_WINTER = "45 14 * * *"  # 22:45 SGT: US and European markets both open (US winter time)
 SCHED_ENERGY_NOON = "15 6 * * *"      # 14:15 SGT: previous day's final Yahoo settlements and ICE gasoil settlement
 
 
 def plan(schedule, ny_now):
-    """Decide what this run downloads.
-    Indices: the 05:15 SGT run (and manual runs). Energy: every run. GitHub often starts scheduled
-    runs late (sometimes hours), so nothing depends on the exact start time: unfinished trading days
-    are dropped by drop_unfinished(). In US winter the 05:15 run is before the 17:00 New York close,
-    so the 06:15 run picks up that day's energy prices."""
-    if not schedule:
-        return True, True
-    return schedule == SCHED_INDEX, True
+    """Decide what this run downloads: indices and energy on every run (scheduled or manual).
+    The latest day may be a live price; each run re-downloads the full history, so earlier days end up
+    with final closes whatever time GitHub actually starts the run.
+    The US/Europe overlap run has two schedules (21:45 and 22:45 SGT); only the one matching US daylight
+    saving time runs: 21:45 SGT in US summer time, 22:45 SGT in US winter time."""
+    us_summer = bool(ny_now.dst())
+    if schedule == SCHED_OVERLAP_SUMMER and not us_summer:
+        return False, False
+    if schedule == SCHED_OVERLAP_WINTER and us_summer:
+        return False, False
+    return True, True
 
 
 def main():
@@ -675,6 +699,10 @@ def main():
     schedule = os.environ.get("SCHEDULE", "").strip()
     ny = now.astimezone(ZoneInfo("America/New_York"))
     do_idx, do_energy = plan(schedule, ny)
+    if not (do_idx or do_energy):
+        print(f"Run: schedule {schedule}; New York time {ny:%Y-%m-%d %H:%M %Z}. Skipped: the other "
+              f"US/Europe overlap run applies in {'summer' if ny.dst() else 'winter'} time.")
+        return
     print(f"Run: {'schedule ' + schedule if schedule else 'manual/push'}; New York time {ny:%Y-%m-%d %H:%M %Z}. "
           f"Indices: {'yes' if do_idx else 'skip'}. Energy: {'yes' if do_energy else 'skip'}.")
     print()

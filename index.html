@@ -145,6 +145,8 @@ button{font:inherit;cursor:pointer}
 .lad-table th{text-align:right;vertical-align:bottom;font-weight:600;color:var(--muted);padding:6px 5px;border-bottom:1px solid var(--line);white-space:normal;line-height:1.25}
 .lad-table th:first-child{min-width:0}
 .unit-note{font:400 .78rem "Public Sans",sans-serif;color:var(--muted);margin-left:6px}
+.live-tag{display:inline-block;font:600 .64rem "Public Sans",system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#B8892B;border:1px solid #B8892B;border-radius:999px;padding:0 6px;margin-left:5px;vertical-align:1px;line-height:1.5}
+.upd-note{margin:-4px 0 10px;font:500 .84rem "Public Sans",system-ui,sans-serif;color:var(--muted)}
 .e-head-r{display:flex;align-items:center;gap:10px}
 .e-mode{display:inline-flex;gap:4px}
 .lad-table td small.blk{display:block}
@@ -338,6 +340,7 @@ button{font:inherit;cursor:pointer}
   <main id="gap" hidden>
     <section class="ledger">
       <h2 class="lad-title">Index gap analysis</h2>
+      <p class="upd-note" id="gUpd"></p>
       <p class="lad-intro">Pick a start date and two indices. Each day's gain or loss is close ÷ previous close − 1. The accumulated gain/loss is the <em>sum</em> of those daily percentages from the start date to the last date (not last close ÷ start close). The charts show every index's accumulated gain/loss and the gap between A and B.</p>
       <div class="lad-inputs lad-first">
         <label><span>Start date</span><input type="date" id="gStart"></label>
@@ -499,6 +502,7 @@ button{font:inherit;cursor:pointer}
   <main id="energy" hidden>
     <section class="ledger">
       <h2 class="lad-title">Energy gap analysis</h2>
+      <p class="upd-note" id="eUpd"></p>
       <p class="lad-intro">Front-month futures prices, all converted to <em>USD per barrel</em> so each pair is comparable (gallons × 42, tonnes of gasoil ÷ 7.45). The gap is the first price minus the second. The gap line is black; days more than 2σ from the period average are marked with pink points, and more than 3σ with red points.</p>
       <div class="lad-inputs lad-first">
         <label><span>Start date</span><input type="date" id="eStart"></label>
@@ -920,6 +924,9 @@ const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(
 const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
 const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
 const nameOf = k => (D.meta[k]&&D.meta[k].name)||k;
+const sgTime = iso => new Date(iso).toLocaleString("en-US",{timeZone:"Asia/Singapore",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}) + " SGT";
+const LIVE_TAG = '<span class="live-tag" title="Live price: the market was still trading when the data was updated">live</span>';
+const isLive = k => !!(D.meta[k] && D.meta[k].live);
 
 async function load(){
   try{
@@ -931,6 +938,7 @@ async function load(){
     return;
   }
   dates = D.dates; ts = dates.map(d=>Date.parse(d+"T00:00:00Z")); keys = Object.keys(D.series);
+  $("gUpd").innerHTML = `Data last updated by GitHub: <b>${sgTime(D.generated)}</b>` + (keys.some(isLive) ? ` · ${LIVE_TAG} = still trading at that time` : "");
   keys.forEach(k=>["gA","gB"].forEach(id=>{ const o=document.createElement("option"); o.value=k; o.textContent=nameOf(k); $(id).appendChild(o); }));
   $("gQuick").value = "5y";
   try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
@@ -1040,7 +1048,7 @@ function renderAll(acc, ranked, missing, s0){
   if(!showAll){ if(allChart){ allChart.destroy(); allChart=null; } return; }
   const muted=cssVar("--muted"), line=cssVar("--line"), ink=cssVar("--ink");
   const ds = ranked.map(([k,v])=>{ const ci=keys.indexOf(k), col=PALETTE[ci%PALETTE.length]; return {
-    key:k, label:`${k} ${pct(v,1)}`, data:acc[k].map((y,j)=>({x:ts[s0+j],y})), parsing:false,
+    key:k, label:`${k} ${pct(v,1)}${isLive(k)?" (live)":""}`, data:acc[k].map((y,j)=>({x:ts[s0+j],y})), parsing:false,
     borderColor:col, backgroundColor:col, borderWidth:1.6, borderDash:DASHES[ci%DASHES.length], tension:0, fill:false, hidden:hiddenKeys.has(k),
     // a marker every ~1/12 of the line, staggered per index so markers don't stack on the same date
     pointStyle:SHAPES[ci%SHAPES.length], pointHoverRadius:5, pointBorderWidth:1.2, pointBackgroundColor:"transparent",
@@ -1088,7 +1096,7 @@ function renderPair(sStart){
     else if(peak-g>ddMax){ ddMax=peak-g; ddPeakI=iPeak; ddBotI=i; }
   }
   const set=(id,v)=>{ $(id).textContent=pct(v); $(id).className=v>=0?"pos":"neg"; };
-  $("gLA").textContent=`Accumulated ${A}`; $("gLB").textContent=`Accumulated ${B}`;
+  $("gLA").innerHTML=`Accumulated ${A}${isLive(A)?LIVE_TAG:""}`; $("gLB").innerHTML=`Accumulated ${B}${isLive(B)?LIVE_TAG:""}`;
   set("gVA",ca); set("gVB",cb); set("gVG",ca-cb);
   set("gVMax",gMax); $("gVMax").title=fmtD(dates[iMax]);
   set("gVMin",gMin); $("gVMin").title=fmtD(dates[iMin]);
@@ -1104,7 +1112,7 @@ function renderPair(sStart){
   const mA=D.meta[A]||{}, mB=D.meta[B]||{};
   const notes=Object.values(D.meta).filter(m=>m.substitute).map(m=>m.substitute);
   const upd=new Date(D.generated).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-  $("gSrc").textContent = `Daily closes from Yahoo Finance (${mA.ticker||A}, ${mB.ticker||B}), updated ${upd}. Latest close: ${A} ${fmtD(mA.last||dates[dates.length-1])}, ${B} ${fmtD(mB.last||dates[dates.length-1])}. Weekdays with no close (holidays) carry the previous close forward and count as 0%.${notes.length?" Note: "+notes.join("; ")+".":""}${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")} (previous data kept).`:""}`;
+  $("gSrc").textContent = `Daily closes from Yahoo Finance (${mA.ticker||A}, ${mB.ticker||B}), updated ${upd}. Latest close: ${A} ${fmtD(mA.last||dates[dates.length-1])}${mA.live?" (live price, market still open at the update)":""}, ${B} ${fmtD(mB.last||dates[dates.length-1])}${mB.live?" (live price, market still open at the update)":""}. Weekdays with no close (holidays) carry the previous close forward and count as 0%.${notes.length?" Note: "+notes.join("; ")+".":""}${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")} (previous data kept).`:""}`;
 
   const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
   const cA=PALETTE[keys.indexOf(A)%PALETTE.length], cB=PALETTE[keys.indexOf(B)%PALETTE.length];
@@ -1175,6 +1183,9 @@ const num = v => v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFracti
 const sg = v => (v>0.005?"+":v<-0.005?"−":"")+num(Math.abs(v));
 const NAMES = {BRENT:"Brent crude", WTI:"WTI crude (Texas)", HO:"US heating oil", RB:"US gasoline (RBOB)", GO:"UK gasoil (ICE)"};
 const nameOf = k => (D&&D.meta[k]&&D.meta[k].name)||NAMES[k]||k;
+const sgTime = iso => new Date(iso).toLocaleString("en-US",{timeZone:"Asia/Singapore",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}) + " SGT";
+const LIVE_TAG = '<span class="live-tag" title="Live price: the market was still trading when the data was updated">live</span>';
+const isLive = k => !!(D && D.meta[k] && D.meta[k].live);
 
 function buildPanels(){
   const host=$("ePanels"); host.innerHTML="";
@@ -1209,6 +1220,7 @@ async function load(){
     D=await r.json();
   }catch(e){ $("eSrc").textContent="Couldn't load the energy data (data/energy.json). It's created by the daily workflow; run it once from the Actions tab."; return; }
   dates=D.dates; ts=dates.map(d=>Date.parse(d+"T00:00:00Z"));
+  $("eUpd").innerHTML = `Data last updated by GitHub: <b>${sgTime(D.generated)}</b>` + (Object.keys(D.meta).some(isLive) ? ` · ${LIVE_TAG} = still trading at that time` : "");
   try{ const rc=await fetch("data/curve.json",{cache:"no-store"}); if(rc.ok) CV=await rc.json(); }catch(e){ CV=null; }
   $("eQuick").value="1y";
   try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(o.start) $("eStart").value=o.start; if(o.quick!==undefined) $("eQuick").value=o.quick; $("ePrices").checked=o.prices!==false; if(Array.isArray(o.modes)) modes=PAIRS.map((_,i)=>o.modes[i]==="ratio"?"ratio":"gap"); if(Array.isArray(o.cv)) cvShow=PAIRS.map((_,i)=>o.cv[i]!==false); } }catch(e){}
@@ -1282,7 +1294,7 @@ function renderCurve(p,i){
 function renderPair(p,i,sIdx){
   renderCurve(p,i);
   const va=D.series[p.a], vb=D.series[p.b];
-  $("eLA"+i).textContent=nameOf(p.a); $("eLB"+i).textContent=nameOf(p.b);
+  $("eLA"+i).innerHTML=nameOf(p.a)+(isLive(p.a)?LIVE_TAG:""); $("eLB"+i).innerHTML=nameOf(p.b)+(isLive(p.b)?LIVE_TAG:"");
   // Gap (A − B, USD/bbl) or Ratio (A ÷ B): every figure, band and the chart follow this choice
   const R = modes[i]==="ratio", W = R?"ratio":"gap", Wc = R?"Ratio":"Gap";
   document.querySelectorAll(`.e-mode button[data-i="${i}"]`).forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.m===modes[i])));

@@ -176,6 +176,8 @@ button{font:inherit;cursor:pointer}
 .rank b{font:600 1rem "Familjen Grotesk",sans-serif;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rank b.pos{color:var(--green)} .rank b.neg{color:var(--red)}
 .chart-box.tall{height:420px}
+.chart-box.ind{height:190px;margin-top:10px}
+.ind-note{margin:4px 0 14px;font:400 .8rem "Public Sans",system-ui,sans-serif;color:var(--muted)}
 @media (max-width:700px){.chart-box.tall{height:460px}}
 .ghost:disabled{opacity:.5;cursor:default}
 .hours-wrap{overflow-x:auto}
@@ -356,6 +358,7 @@ button{font:inherit;cursor:pointer}
       </div>
       <div class="lad-inputs">
         <label class="chk"><input type="checkbox" id="gShowAB" checked> Also show accumulated A and B on the gap chart</label>
+        <label class="chk"><input type="checkbox" id="gShowInd" checked> Show MACD and RSI of A − B below the gap chart</label>
       </div>
       <p class="err" id="gErr" role="alert"></p>
       <div class="totals lad-totals gap-totals">
@@ -413,6 +416,12 @@ button{font:inherit;cursor:pointer}
     <section class="panel">
       <h3 id="gTitle">Accumulated gain/loss gap by date</h3>
       <div class="chart-box"><canvas id="gChart" role="img" aria-label="Accumulated gain/loss gap between the two indices by date"></canvas></div>
+      <div id="gInd">
+        <div class="chart-box ind"><canvas id="gMacd" role="img" aria-label="MACD of the gap A minus B"></canvas></div>
+        <p class="ind-note" id="gMacdNote"></p>
+        <div class="chart-box ind"><canvas id="gRsi" role="img" aria-label="RSI of the gap A minus B"></canvas></div>
+        <p class="ind-note" id="gRsiNote"></p>
+      </div>
       <p class="hint lad-note" id="gSrc">Loading data…</p>
     </section>
 
@@ -915,7 +924,7 @@ const LK = "finmon-gap-v3";
 const DASHES = [[], [7,4], [2,3], [10,3,2,3]];                    // solid, dashed, dotted, dash-dot
 const SHAPES = ["circle","triangle","rect","rectRot","crossRot","star","rectRounded"];
 const PALETTE = ["#2F6B4F","#B8892B","#3E6C8F","#8E5B8C","#B9653A","#6E9A78","#A44A4A","#5B6FB5","#C2A13A","#2E8C8C","#9C6B3E","#7A4FA0","#5F7F2E"];
-let D = null, chart = null, allChart = null, dates = [], ts = [], keys = [];
+let D = null, chart = null, allChart = null, macdChart = null, rsiChart = null, dates = [], ts = [], keys = [];
 let auto = true, showAll = true, hiddenKeys = new Set(), showTbl = true, sortK = "r", sortD = -1, pairs = [];
 const GROUPS = { US:["US30","US100","US500","US2000"], EU:["UK100","GER40","FRA40","ITA40","ESP35"], OT:["AUS200","CAN60","HK50","JPN225"] };
 
@@ -944,12 +953,12 @@ async function load(){
   try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
     if(keys.includes(o.A)) $("gA").value=o.A; if(keys.includes(o.B)) $("gB").value=o.B;
     if(o.start) $("gStart").value=o.start; if(o.quick!==undefined) $("gQuick").value=o.quick;
-    $("gShowAB").checked=o.ab!==false; auto = o.auto==="dd" ? "dd" : o.auto!==false; showAll=o.all!==false; showTbl=o.tbl!==false; if(o.sk) sortK=o.sk; if(o.sd) sortD=o.sd; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
+    $("gShowAB").checked=o.ab!==false; $("gShowInd").checked=o.ind!==false; auto = o.auto==="dd" ? "dd" : o.auto!==false; showAll=o.all!==false; showTbl=o.tbl!==false; if(o.sk) sortK=o.sk; if(o.sd) sortD=o.sd; if(Array.isArray(o.hid)) hiddenKeys=new Set(o.hid); } }catch(e){}
   setAllVisible(showAll);
   syncGroupBtns();
   render();
 }
-function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,auto,all:showAll,hid:[...hiddenKeys],tbl:showTbl,sk:sortK,sd:sortD})); }catch(e){} }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({A:$("gA").value,B:$("gB").value,start:$("gStart").value,quick:$("gQuick").value,ab:$("gShowAB").checked,ind:$("gShowInd").checked,auto,all:showAll,hid:[...hiddenKeys],tbl:showTbl,sk:sortK,sd:sortD})); }catch(e){} }
 
 function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
 function applyQuick(minIdx, allIdx){
@@ -1129,6 +1138,68 @@ function renderPair(sStart){
   if(!window.Chart) return;
   if(chart){ chart.data.datasets=ds; chart.options=opts; chart.update(); }
   else chart=new Chart($("gChart"),{type:"line",data:{datasets:ds},options:opts});
+  renderInd(A, B, s0);
+}
+
+// MACD (12, 26, 9) and RSI (14, Wilder) of the gap A − B. Both only use day-to-day changes of the gap, so they
+// do not depend on the start date; they are computed over the pair's whole common history (warm-up included)
+// and shown for the selected range.
+function emaArr(x, from, p){
+  const k=2/(p+1), out=new Array(x.length).fill(null); let e=x[from]; out[from]=e;
+  for(let i=from+1;i<x.length;i++){ e = x[i]*k + e*(1-k); out[i]=e; }
+  return out;
+}
+function renderInd(A, B, s0){
+  const on=$("gShowInd").checked; $("gInd").hidden=!on;
+  if(!on || A===B){ if(macdChart){macdChart.destroy();macdChart=null;} if(rsiChart){rsiChart.destroy();rsiChart=null;} if(A===B) $("gInd").hidden=true; return; }
+  const va=D.series[A], vb=D.series[B], n=dates.length;
+  let f=0; while(f<n && (va[f]==null||vb[f]==null)) f++;
+  if(f>=n-2) return;
+  const g=new Array(n).fill(null); let c=0; g[f]=0;
+  for(let i=f+1;i<n;i++){ c += (va[i]/va[i-1]-vb[i]/vb[i-1])*100; g[i]=c; }
+  const e12=emaArr(g,f,12), e26=emaArr(g,f,26);
+  const macd=g.map((_,i)=> i<f ? null : e12[i]-e26[i]);
+  const sig=emaArr(macd.map((v,i)=> i<f ? 0 : v), f, 9).map((v,i)=> i<f ? null : v);
+  const rsi=new Array(n).fill(null); const P=14;
+  if(n-f>P){
+    let up=0, dn=0;
+    for(let i=f+1;i<=f+P;i++){ const d=g[i]-g[i-1]; if(d>0) up+=d; else dn-=d; }
+    up/=P; dn/=P; rsi[f+P] = dn===0 ? 100 : 100-100/(1+up/dn);
+    for(let i=f+P+1;i<n;i++){ const d=g[i]-g[i-1]; up=(up*(P-1)+Math.max(d,0))/P; dn=(dn*(P-1)+Math.max(-d,0))/P; rsi[i] = dn===0 ? 100 : 100-100/(1+up/dn); }
+  }
+  const a0=Math.max(s0,f), last=n-1;
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line"), SIG="#B8892B", RS="#3E6C8F";
+  const pts=arr=>{ const o=[]; for(let i=a0;i<=last;i++) o.push({x:ts[i],y:arr[i]}); return o; };
+  const hist=macd.map((v,i)=> v==null||sig[i]==null ? null : v-sig[i]);
+  const f2=v=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(2);
+  // MACD chart
+  const mOpts=baseOpts(a0, muted, line, ink);
+  mOpts.scales.y={ title:{display:true,text:"MACD (pts)",color:muted}, ticks:{color:muted,maxTicksLimit:5}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.2:1} };
+  mOpts.interaction={mode:"nearest",axis:"x",intersect:false};
+  mOpts.plugins.legend={display:true, labels:{color:muted, boxWidth:18}};
+  mOpts.plugins.tooltip={ callbacks:{ title:tipDate, label:it=>`${it.dataset.label}: ${f2(it.parsed.y)}` } };
+  const mDs=[
+    { label:"Histogram (MACD − signal)", data:pts(hist), parsing:false, borderWidth:0, pointRadius:0, tension:0, borderColor:green,
+      segment:{ borderColor:c=>(c.p0.parsed.y+c.p1.parsed.y)/2>=0?green:red }, fill:{target:"origin", above:green+"55", below:red+"55"} },
+    { label:"MACD (12, 26)", data:pts(macd), parsing:false, borderColor:ink, borderWidth:1.5, pointRadius:0, tension:0, fill:false },
+    { label:"Signal (9)", data:pts(sig), parsing:false, borderColor:SIG, borderWidth:1.4, pointRadius:0, tension:0, fill:false } ];
+  // RSI chart
+  const rOpts=baseOpts(a0, muted, line, ink);
+  rOpts.scales.y={ min:0, max:100, title:{display:true,text:"RSI (14)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,30,50,70,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line} };
+  rOpts.interaction={mode:"nearest",axis:"x",intersect:false};
+  rOpts.plugins.legend={display:true, labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex}};
+  rOpts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate, label:it=>`RSI: ${it.parsed.y.toFixed(1)}` } };
+  const ref=(y,lab,col,dash)=>({ label:lab, data:[{x:ts[a0],y},{x:ts[last],y}], parsing:false, borderColor:col, borderWidth:1.1, borderDash:dash, pointRadius:0, fill:false, isRef:true });
+  const rDs=[ { label:"RSI (14) of A − B", data:pts(rsi), parsing:false, borderColor:RS, borderWidth:1.6, pointRadius:0, tension:0, fill:false },
+    ref(70,"70 / 30",red,[6,4]), ref(30,"70 / 30",green,[6,4]), ref(50,"50",muted,[2,3]) ];
+  // notes (latest values)
+  const L=last, warm = a0 < f+35 ? " The first weeks after the pair's first common date are a warm-up and less reliable." : "";
+  const mv=macd[L], sv=sig[L], hv=hist[L], rv=rsi[L];
+  $("gMacdNote").textContent = mv==null ? "" : `MACD of the gap on ${fmtD(dates[L])}: MACD ${f2(mv)}, signal ${f2(sv)}, histogram ${f2(hv)} (MACD ${hv>=0?"above":"below"} its signal line). MACD = 12-day EMA − 26-day EMA of the gap A − B (percentage points); signal = 9-day EMA of MACD.${warm}`;
+  $("gRsiNote").textContent = rv==null ? "" : `RSI of the gap on ${fmtD(dates[L])}: ${rv.toFixed(1)}${rv>=70?" (above 70: the gap has risen strongly lately)":rv<=30?" (below 30: the gap has fallen strongly lately)":""}. RSI (14, Wilder smoothing) of the daily changes in A − B; above 70 and below 30 are the usual overbought / oversold levels.`;
+  if(!window.Chart) return;
+  if(macdChart){ macdChart.data.datasets=mDs; macdChart.options=mOpts; macdChart.update(); } else macdChart=new Chart($("gMacd"),{type:"line",data:{datasets:mDs},options:mOpts});
+  if(rsiChart){ rsiChart.data.datasets=rDs; rsiChart.options=rOpts; rsiChart.update(); } else rsiChart=new Chart($("gRsi"),{type:"line",data:{datasets:rDs},options:rOpts});
 }
 
 function setAllVisible(v){
@@ -1157,10 +1228,11 @@ const pickRow=tr=>{ if(!tr||!tr.dataset.a) return; $("gA").value=tr.dataset.a; $
 $("gPRows").addEventListener("click",e=>pickRow(e.target.closest("tr")));
 $("gPRows").addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pickRow(e.target.closest("tr")); } });
 $("gShowAB").addEventListener("change",render);
+$("gShowInd").addEventListener("change",render);
 $("gQuick").addEventListener("change",render);
 $("gStart").addEventListener("change",()=>{ $("gQuick").value=""; render(); });
-document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} requestAnimationFrame(render); }));
-const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} render(); });
+document.querySelectorAll('.tabs button[data-view="gap"]').forEach(b=>b.addEventListener("click",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} if(macdChart){macdChart.destroy();macdChart=null;} if(rsiChart){rsiChart.destroy();rsiChart=null;} requestAnimationFrame(render); }));
+const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ if(chart){chart.destroy();chart=null;} if(allChart){allChart.destroy();allChart=null;} if(macdChart){macdChart.destroy();macdChart=null;} if(rsiChart){rsiChart.destroy();rsiChart=null;} render(); });
 load();
 })();
 </script>

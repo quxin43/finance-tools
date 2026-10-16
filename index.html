@@ -34,9 +34,12 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
 h1,h2,h3{font-family:"Familjen Grotesk","Public Sans",system-ui,sans-serif;margin:0;line-height:1.15}
 .wrap{max-width:1180px;margin:0 auto;padding:20px 18px 48px}
-header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;justify-content:space-between;margin-bottom:18px}
+header.top{display:grid;grid-template-columns:1fr auto;align-items:start;gap:10px 20px;margin-bottom:18px}
+header.top h1{grid-column:1;grid-row:1;padding-top:5px}
+header.top .upd-box{grid-column:2;grid-row:1}
+header.top .tabs{grid-column:1 / -1;grid-row:2;justify-self:start}
 header.top h1{font-size:1.45rem;font-weight:700;letter-spacing:-.01em}
-.upd-box{display:flex;flex-direction:column;align-items:flex-end;gap:3px;margin-left:auto}
+.upd-box{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .upd-row{display:flex;align-items:center;gap:6px}
 #updStatus{font:400 .76rem "Public Sans",system-ui,sans-serif;color:var(--muted);max-width:340px;text-align:right}
 #updGear{padding:4px 8px}
@@ -617,7 +620,7 @@ button{font:inherit;cursor:pointer}
     <section class="ledger">
       <h2 class="lad-title">Agriculture gap analysis</h2>
       <p class="upd-note" id="aUpd"></p>
-      <p class="lad-intro">Front-month CBOT futures. Grains are in <em>US cents per bushel</em>, as quoted by the exchange and CMC. <em>Soybeans ÷ corn</em> drives US planting: farmers switch acres to whichever pays more (for new-crop November soybeans ÷ December corn, about 2.4 or above favours soybeans, about 2.2 or below favours corn). <em>Wheat − corn</em> is a feed-substitution spread: when wheat gets close to corn, it is fed to livestock instead. The <em>soybean crush</em> is the processors' margin: oil and meal from one bushel minus the bushel's price. <em>BOHO</em> (soybean oil − heating oil, USD per gallon) is the biodiesel margin gauge. Each panel can show the gap or the ratio; the line is black, with pink points beyond 2σ and red points beyond 3σ of the period average.</p>
+      <p class="lad-intro">Front-month CBOT futures. Grains are in <em>US cents per bushel</em>, as quoted by the exchange and CMC. <em>BOHO</em> (soybean oil − heating oil, USD per gallon) is the biodiesel margin gauge. <em>Soybeans ÷ corn</em> drives US planting: farmers switch acres to whichever pays more (for new-crop November soybeans ÷ December corn, about 2.4 or above favours soybeans, about 2.2 or below favours corn). <em>Wheat − corn</em> is a feed-substitution spread: when wheat gets close to corn, it is fed to livestock instead. The <em>soybean crush</em> is the processors' margin: oil and meal from one bushel minus the bushel's price. Each panel can show the gap or the ratio; the line is black, with pink points beyond 2σ and red points beyond 3σ of the period average.</p>
       <div class="lad-inputs lad-first">
         <label><span>Start date</span><input type="date" id="aStart"></label>
         <label><span>Quick range</span><select id="aQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="all">All data</option></select></label>
@@ -1595,10 +1598,10 @@ pairTab({ p:"e", view:"energy", what:"energy", lk:"finmon-energy-v1", data:"data
   srcLead:"Front-month futures from Yahoo Finance (UK gasoil from OilPriceAPI)",
   curveNote:'Hover a price for its ticker and native price (heating oil and gasoline in USD/gal × 42, gasoil in USD/t ÷ 7.45). Volume = contracts traded on the settlement day; open interest = contracts still open (k = thousand); hover for exact numbers. "—" = not available (OilPriceAPI gives no open interest for gasoil).' });
 pairTab({ p:"a", view:"agri", what:"agriculture", lk:"finmon-agri-v1", data:"data/agri.json", curve:"data/agri_curve.json",
-  pairs:[ { a:"SOY", b:"CORN", title:"Soybeans ÷ corn", def:"ratio", dp:3, note:"bushels of corn per bushel of soybeans" },
+  pairs:[ { a:"BOGAL", b:"HO", title:"Soybean oil − heating oil (BOHO)", def:"gap", dp:3, gdp:3, unit:"USD/gal", unitLong:"USD per gallon" },
+          { a:"SOY", b:"CORN", title:"Soybeans ÷ corn", def:"ratio", dp:3, note:"bushels of corn per bushel of soybeans" },
           { a:"WHEAT", b:"CORN", title:"Wheat − corn", def:"gap", dp:3 },
-          { a:"SOYPROD", b:"SOY", title:"Soybean crush: oil + meal − soybeans", def:"gap", dp:3, note:"oil + meal value ÷ soybean price" },
-          { a:"BOGAL", b:"HO", title:"Soybean oil − heating oil (BOHO)", def:"gap", dp:3, gdp:3, unit:"USD/gal", unitLong:"USD per gallon" } ],
+          { a:"SOYPROD", b:"SOY", title:"Soybean crush: oil + meal − soybeans", def:"gap", dp:3, note:"oil + meal value ÷ soybean price" } ],
   names:{SOY:"Soybeans (CBOT)", CORN:"Corn (CBOT)", WHEAT:"Wheat (CBOT)", MEAL:"Soybean meal (CBOT)", SOYOIL:"Soybean oil (CBOT)", HO:"US heating oil", SOYPROD:"Soy oil + meal (crush value)", BOGAL:"Soybean oil (per gallon)"},
   short:{SOY:"Soybeans", CORN:"Corn", WHEAT:"Wheat", SOYPROD:"Oil + meal", BOGAL:"Soy oil", HO:"Heating oil"},
   units:{SOY:"¢/bu", CORN:"¢/bu", WHEAT:"¢/bu", MEAL:"USD/st", SOYOIL:"¢/lb", HO:"USD/gal", SOYPROD:"¢/bu", BOGAL:"USD/gal"},

@@ -6,6 +6,7 @@ Download daily closes for the 13 indices from Yahoo Finance and write data/indic
 - Gaps (holidays, missing days): filled with the previous date's close, so that day counts as 0%.
 - If a download fails, that index keeps the data already in data/indices.json.
 - Energy futures go to data/energy.json. UK gasoil comes from OilPriceAPI (needs the OILPRICEAPI_KEY secret).
+- Gold, silver, platinum, palladium and copper go to data/metals.json; their contract months go to data/metal_curve.json.
 """
 import json
 import sys
@@ -50,6 +51,16 @@ ENERGY = [
     ("GO",    "UK gasoil (ICE)",      "USD/t",   ["OilPriceAPI"],   1 / 7.45),
 ]
 ENERGY_MIN_ROWS = 250
+
+# Precious metals (Yahoo COMEX front-month continuous), USD per troy ounce. Same layout as ENERGY.
+METALS_OUT = DATA / "metals.json"
+METALS = [
+    ("GOLD",      "Gold (COMEX)",        "USD/oz", ["GC=F"], 1.0),
+    ("SILVER",    "Silver (COMEX)",      "USD/oz", ["SI=F"], 1.0),
+    ("PLATINUM",  "Platinum (NYMEX)",    "USD/oz", ["PL=F"], 1.0),
+    ("PALLADIUM", "Palladium (NYMEX)",   "USD/oz", ["PA=F"], 1.0),
+    ("COPPER",    "Copper (COMEX)",      "USD/lb", ["HG=F"], 1.0),
+]
 
 # UK gasoil is not on Yahoo Finance. It comes from OilPriceAPI (free plan: 50 requests/day).
 # The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
@@ -334,7 +345,11 @@ CLOSE_AT = {
     # CME energy futures: trade date ends at 17:00 New York; the 18:00 restart belongs to the next trade date
     "BRENT": ("America/New_York", 17.0), "WTI": ("America/New_York", 17.0),
     "HO": ("America/New_York", 17.0), "RB": ("America/New_York", 17.0), "GO": ("Europe/London", 17.5),
+    # COMEX metals: same CME Globex hours as NYMEX energy
+    "GOLD": ("America/New_York", 17.0), "SILVER": ("America/New_York", 17.0),
+    "PLATINUM": ("America/New_York", 17.0), "PALLADIUM": ("America/New_York", 17.0), "COPPER": ("America/New_York", 17.0),
 }
+CME_KEYS = ("BRENT", "WTI", "HO", "RB", "GOLD", "SILVER", "PLATINUM", "PALLADIUM", "COPPER")   # Sunday 18:00 to Friday 17:00 New York, daily break 17-18
 
 
 LIVE_LAST_BAR = True   # keep Yahoo's latest bar even if it is still trading (a live price); earlier days are
@@ -349,8 +364,8 @@ def is_live(key, last_day, now):
     tz, close_h = CLOSE_AT[key]
     local = now.astimezone(ZoneInfo(tz))
     h, wd, d = local.hour + local.minute / 60, local.weekday(), pd.Timestamp(last_day).date()
-    if key in ("BRENT", "WTI", "HO", "RB"):
-        # NYMEX trades Sunday 18:00 to Friday 17:00 New York with a daily 17:00-18:00 break; while it is open,
+    if key in CME_KEYS:
+        # NYMEX/COMEX trade Sunday 18:00 to Friday 17:00 New York with a daily 17:00-18:00 break; while it is open,
         # Yahoo keeps updating the latest bar (also with the evening session) until it opens the next day's bar
         weekend = (wd == 4 and h >= 17) or wd == 5 or (wd == 6 and h < 18)
         in_break = 17 <= h < 18
@@ -382,7 +397,7 @@ def drop_unfinished(key, s, now):
     if len(cut):
         print(f"  {key}: dropped {len(cut)} unfinished bar(s) after {last_done:%Y-%m-%d}")
     kept = s[s.index <= last_done]
-    if key in ("BRENT", "WTI", "HO", "RB") and len(kept) and not (s.index > kept.index[-1]).any():
+    if key in CME_KEYS and len(kept) and not (s.index > kept.index[-1]).any():
         # Yahoo keeps updating the latest daily bar with evening-session trades (from 18:00 New York) until it
         # opens the next day's bar. So the latest bar is only trusted before 18:00 on its own date (the 17:00-18:00
         # break gives the closing price), or while the market is shut for the weekend; otherwise it is held back
@@ -669,6 +684,68 @@ def build_curve(now):
     print(f"Curve: wrote {CURVE_OUT.name}")
 
 
+# ---------------------------------------------------------------- metal futures curve (gold and silver, COMEX)
+METAL_CURVE_OUT = DATA / "metal_curve.json"
+# Yahoo root and exchange suffix of the monthly contracts, unit
+METAL_CURVE_LEGS = {"GOLD": ("GC", "CMX", "USD/oz"), "SILVER": ("SI", "CMX", "USD/oz"),
+                    "PLATINUM": ("PL", "NYM", "USD/oz"), "PALLADIUM": ("PA", "NYM", "USD/oz"),
+                    "COPPER": ("HG", "CMX", "USD/lb")}
+METAL_CURVE_PAIRS = [("GOLD", "SILVER"), ("GOLD", "PLATINUM"), ("PLATINUM", "PALLADIUM"), ("COPPER", "GOLD")]
+
+
+def comex_metal_expiry(y, m):
+    """COMEX gold, silver, copper and NYMEX platinum, palladium: last trading day is the third-last business day
+    of the delivery month (exchange holidays ignored)."""
+    return _bday_back(_last_bday(y, m) + timedelta(days=1), 3)
+
+
+def build_metal_curve(now):
+    """Contracts for the next 12 delivery months of each metal pair (Yahoo monthly tickers, e.g. GCZ26.CMX, PLF27.NYM).
+    Metals list different months (gold Feb/Apr/Jun/Aug/Oct/Dec, silver Jan/Mar/May/Jul/Sep/Dec, platinum
+    Jan/Apr/Jul/Oct, palladium Mar/Jun/Sep/Dec, copper every month; all of them the nearest few months), so a month
+    is kept if either metal has a price; the page fills the other metal's price for that month by interpolating
+    between its neighbouring contracts."""
+    from zoneinfo import ZoneInfo
+    today = now.astimezone(ZoneInfo("America/New_York")).date()
+    months, y, m = [], today.year, today.month
+    for _ in range(CURVE_MONTHS + 4):
+        if comex_metal_expiry(y, m) >= today:
+            months.append((y, m))
+        y, m = (y, m + 1) if m < 12 else (y + 1, 1)
+    cache = {}
+
+    def leg(key, y, m):
+        root, exch, unit = METAL_CURVE_LEGS[key]
+        t = f"{root}{MONTH_CODE[m-1]}{y % 100:02d}.{exch}"
+        if t not in cache:
+            cache[t] = yahoo_last_settle(t, key, now)
+        price, date, vol, oi = cache[t]
+        return {"ticker": t, "px": None if price is None else round(price, 4), "unit": unit,
+                "date": date, "vol": vol, "oi": oi, "expiry": comex_metal_expiry(y, m).strftime("%Y-%m-%d")}
+
+    pairs = []
+    for a, b in METAL_CURVE_PAIRS:
+        rows = []
+        for (y, m) in months:
+            la, lb = leg(a, y, m), leg(b, y, m)
+            if la["px"] is None and lb["px"] is None:
+                continue
+            rows.append({"month": f"{y:04d}-{m:02d}", "a": la, "b": lb})
+            if len(rows) == CURVE_MONTHS:
+                break
+        both = sum(1 for r in rows if r["a"]["px"] is not None and r["b"]["px"] is not None)
+        print(f"  Metal curve {a}-{b}: {len(rows)} months ({rows[0]['month'] if rows else '-'} to "
+              f"{rows[-1]['month'] if rows else '-'}), {both} with both prices")
+        pairs.append({"a": a, "b": b, "rows": rows})
+    if not any(p["rows"] for p in pairs):
+        raise RuntimeError("no metal contract prices")
+    data = {"generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "source": "Yahoo Finance monthly contracts (COMEX GC gold, SI silver, HG copper; NYMEX PL platinum, PA palladium)",
+            "pairs": pairs}
+    METAL_CURVE_OUT.write_text(json.dumps(data, separators=(",", ":")))
+    print(f"Metal curve: wrote {METAL_CURVE_OUT.name}")
+
+
 SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
 SCHED_ENERGY_WINTER = "15 22 * * *"  # 06:15 SGT
 SCHED_OVERLAP_SUMMER = "45 13 * * *"  # 21:45 SGT: US and European markets both open (US summer time)
@@ -719,6 +796,13 @@ def main():
             build_curve(now)
         except Exception as e:                      # the curve table is optional; never fail the run
             print(f"Curve: failed ({e}); previous curve.json kept")
+        print()
+        run_set("Metals", METALS, METALS_OUT, start, end, now, min_rows=ENERGY_MIN_ROWS, digits=3)
+        print()
+        try:
+            build_metal_curve(now)
+        except Exception as e:
+            print(f"Metal curve: failed ({e}); previous metal_curve.json kept")
 
     if do_idx and len(failed_idx) == len(INDICES):
         print("No index downloaded.")

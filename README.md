@@ -40,6 +40,19 @@ Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilp
 
 Under each energy chart, a table shows the next 12 contract months traded by both legs, with each month's latest settlement in USD/bbl, the gap and the ratio. Brent, WTI, heating oil and gasoline come from Yahoo's monthly NYMEX tickers (for example `HOX26.NYM` = heating oil, November 2026; month codes F G H J K M N Q U V X Z = Jan to Dec); UK gasoil comes from the OilPriceAPI data the run already downloads. The months are worked out on every run from each exchange's expiry rule, so when the nearest contract expires it drops off and a new month is added at the end. The table also shows each contract's volume (contracts traded on the settlement day) and open interest (contracts still open); open interest comes from Yahoo's quote details and is not available for gasoil. Saved in `data/curve.json` (only the latest curve; no history). The gap charts themselves still use the continuous tickers (BZ=F, CL=F, HO=F, RB=F).
 
+## Metal ratio tab
+
+Four ratio charts, each with average, ±2σ and ±3σ bands like the energy charts, both prices on their own right-hand axes, and a futures-curve table:
+
+- **Gold ÷ silver**: ounces of silver one ounce of gold buys.
+- **Gold ÷ platinum**: platinum's discount to gold.
+- **Platinum ÷ palladium**: the car-catalyst substitution pair.
+- **Copper ÷ gold** (copper USD/lb ÷ gold USD/oz × 1,000): growth-versus-safety gauge; tends to move with the US 10-year yield.
+
+Front-month continuous futures from Yahoo (`GC=F` gold, `SI=F` silver, `HG=F` copper on COMEX; `PL=F` platinum, `PA=F` palladium on NYMEX), downloaded on every run together with energy and saved in `data/metals.json` (full history, kept and extended like the other series). Gold, silver, platinum and palladium are in USD per troy ounce, copper in USD per pound.
+
+The futures-curve tables use Yahoo's monthly tickers (for example `GCZ26.CMX`, `PLF27.NYM`) and are saved in `data/metal_curve.json`. Metals list different months (gold Feb/Apr/Jun/Aug/Oct/Dec, silver Jan/Mar/May/Jul/Sep/Dec, platinum Jan/Apr/Jul/Oct, palladium Mar/Jun/Sep/Dec, copper every month, all of them the nearest few months), so where only one metal of a pair has a contract the page estimates the other metal's price between its neighbouring contracts and marks it "≈". Last trading day: third-last business day of the delivery month.
+
 ## Data rules
 
 - **History:** everything Yahoo has for each series (no cap). Each run merges the new download with the history already saved in `data/`, so the history only grows: if Yahoo ever returns a shorter history, the saved older days are kept (new values win where both exist). If a series switches to a fallback ticker, its history is not mixed with the old ticker's.

@@ -237,6 +237,7 @@ button{font:inherit;cursor:pointer}
       <button role="tab" aria-selected="false" data-view="short">Rally ladder</button>
       <button role="tab" aria-selected="false" data-view="gap">Index gap</button>
       <button role="tab" aria-selected="false" data-view="energy">Energy gap</button>
+      <button role="tab" aria-selected="false" data-view="metal">Metal ratio</button>
     </div>
     <div class="right upd-box">
       <div class="upd-row">
@@ -592,6 +593,24 @@ button{font:inherit;cursor:pointer}
     </section>
   </main>
 
+  <!-- METAL RATIO -->
+  <main id="metal" hidden>
+    <section class="ledger">
+      <h2 class="lad-title">Metal ratio analysis</h2>
+      <p class="upd-note" id="mUpd"></p>
+      <p class="lad-intro">Front-month futures in <em>USD per troy ounce</em> (copper in USD per pound). Each ratio is the first price divided by the second: gold ÷ silver is how many ounces of silver one ounce of gold buys; a high ratio means the second metal is cheap compared with the first. <em>Gold ÷ platinum</em> and <em>platinum ÷ palladium</em> are relative-value pairs (platinum and palladium substitute for each other in car catalysts). <em>Copper ÷ gold</em> (× 1,000) is a growth-versus-safety gauge: it tends to rise when markets expect stronger growth and to move with the US 10-year bond yield. The ratio line is black; days more than 2σ from the period average are marked with pink points, and more than 3σ with red points.</p>
+      <div class="lad-inputs lad-first">
+        <label><span>Start date</span><input type="date" id="mStart"></label>
+        <label><span>Quick range</span><select id="mQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="all">All data</option></select></label>
+      </div>
+      <div class="lad-inputs">
+        <label class="chk"><input type="checkbox" id="mPrices" checked> Also show prices on the ratio charts</label>
+      </div>
+      <p class="hint lad-note" id="mSrc">Loading data…</p>
+    </section>
+    <div id="mPanels"></div>
+  </main>
+
 </div>
 
 <script>
@@ -600,7 +619,7 @@ button{font:inherit;cursor:pointer}
 const $ = id => document.getElementById(id);
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
-  ["ladder","short","gap","energy"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
+  ["ladder","short","gap","energy","metal"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
 }));
 })();
 </script>
@@ -1309,48 +1328,51 @@ load();
 </script>
 <script>
 (function(){
+// Pair tabs (Energy gap, Metal ratio): price pairs from one data file, each with a gap/ratio chart and a futures-curve table.
+// cfg.p is the element id prefix ("e" energy, "m" metal).
+function pairTab(cfg){
 "use strict";
 const $ = id => document.getElementById(id);
-const LK = "finmon-energy-v1";
-const PAIRS = [
-  { a:"BRENT", b:"WTI", title:"Brent − WTI" },
-  { a:"HO",    b:"RB",  title:"US heating oil − US gasoline" },
-  { a:"HO",    b:"GO",  title:"US heating oil − UK gasoil" },
-];
+const P = cfg.p, LK = cfg.lk, PAIRS = cfg.pairs, MODES = cfg.modes, RDP = cfg.ratioDp;
 const CA="#378ADD", CB="#EF9F27";
-let D=null, CV=null, dates=[], ts=[], charts=[], modes=["gap","gap","gap"], cvShow=[true,true,true];   // cvShow: curve table shown per panel   // per panel: "gap" (A − B) or "ratio" (A ÷ B)
+let D=null, CV=null, dates=[], ts=[], charts=[], modes=PAIRS.map(()=>cfg.defMode), cvShow=PAIRS.map(()=>true);   // modes: per panel "gap" (A − B) or "ratio" (A ÷ B); cvShow: curve table shown per panel
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
 const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
 const num = v => v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const sg = v => (v>0.005?"+":v<-0.005?"−":"")+num(Math.abs(v));
-const NAMES = {BRENT:"Brent crude", WTI:"WTI crude (Texas)", HO:"US heating oil", RB:"US gasoline (RBOB)", GO:"UK gasoil (ICE)"};
+// per-pair options: p.dp (ratio decimals), p.scale (ratio multiplier, e.g. copper ÷ gold × 1000), p.note (ratio unit note)
+const unitOf = k => (cfg.units && cfg.units[k]) || cfg.unit;                 // price unit per series
+const sh = k => (cfg.short && cfg.short[k]) || k;                             // short label in headers and axes
+const pn = (v,u) => { const d = u==="USD/lb" ? 4 : 2; return v.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}); };
+const pairOpt = p => ({ dp: p.dp!=null ? p.dp : RDP, SC: p.scale || 1, A: sh(p.a), B: sh(p.b), xs: p.scale && p.scale!==1 ? ` × ${p.scale.toLocaleString("en-US")}` : "" });
+const NAMES = cfg.names;
 const nameOf = k => (D&&D.meta[k]&&D.meta[k].name)||NAMES[k]||k;
 const sgTime = iso => new Date(iso).toLocaleString("en-US",{timeZone:"Asia/Singapore",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}) + " SGT";
 const LIVE_TAG = '<span class="live-tag" title="Live price: the market was still trading when the data was updated">live</span>';
 const isLive = k => !!(D && D.meta[k] && D.meta[k].live);
 
 function buildPanels(){
-  const host=$("ePanels"); host.innerHTML="";
+  const host=$(P+"Panels"); host.innerHTML="";
   PAIRS.forEach((p,i)=>{
     const sec=document.createElement("section"); sec.className="panel";
-    sec.innerHTML=`<div class="txhead"><h3 id="eT${i}">${p.title}</h3>
-        <div class="e-head-r"><div class="e-mode" role="group" aria-label="Show gap or ratio">
-          <button class="chip" type="button" data-i="${i}" data-m="gap">Gap</button><button class="chip" type="button" data-i="${i}" data-m="ratio">Ratio</button></div>
-          <span class="unit-note" id="eU${i}">USD per barrel</span></div></div>
+    sec.innerHTML=`<div class="txhead"><h3 id="${P}T${i}">${p.title}</h3>
+        <div class="e-head-r">${MODES.length>1?`<div class="e-mode" role="group" aria-label="Show gap or ratio">
+          <button class="chip" type="button" data-i="${i}" data-m="gap">Gap</button><button class="chip" type="button" data-i="${i}" data-m="ratio">Ratio</button></div>`:""}
+          <span class="unit-note" id="${P}U${i}">${cfg.unitLong}</span></div></div>
       <div class="totals lad-totals e-totals">
-        <div><span id="eLA${i}">${nameOf(p.a)}</span><b id="eVA${i}">—</b></div>
-        <div><span id="eLB${i}">${nameOf(p.b)}</span><b id="eVB${i}">—</b></div>
-        <div><span id="eKG${i}">Gap<br>(last date)</span><b id="eVG${i}">—</b></div>
-        <div><span id="eKAv${i}">Average gap</span><b id="eVAv${i}">—</b></div>
-        <div><span id="eKHi${i}">Highest gap</span><b id="eVHi${i}">—</b></div>
-        <div><span id="eKLo${i}">Lowest gap</span><b id="eVLo${i}">—</b></div>
-        <div><span id="eKSd${i}">Std dev (σ)<br>of gap</span><b id="eVSd${i}">—</b></div>
-        <div><span id="eKZ${i}">Latest gap<br>vs average</span><b id="eVZ${i}">—</b></div>
+        <div><span id="${P}LA${i}">${nameOf(p.a)}</span><b id="${P}VA${i}">—</b></div>
+        <div><span id="${P}LB${i}">${nameOf(p.b)}</span><b id="${P}VB${i}">—</b></div>
+        <div><span id="${P}KG${i}">Gap<br>(last date)</span><b id="${P}VG${i}">—</b></div>
+        <div><span id="${P}KAv${i}">Average gap</span><b id="${P}VAv${i}">—</b></div>
+        <div><span id="${P}KHi${i}">Highest gap</span><b id="${P}VHi${i}">—</b></div>
+        <div><span id="${P}KLo${i}">Lowest gap</span><b id="${P}VLo${i}">—</b></div>
+        <div><span id="${P}KSd${i}">Std dev (σ)<br>of gap</span><b id="${P}VSd${i}">—</b></div>
+        <div><span id="${P}KZ${i}">Latest gap<br>vs average</span><b id="${P}VZ${i}">—</b></div>
       </div>
-      <div class="chart-box" id="eBox${i}"><canvas id="eC${i}" role="img" aria-label="${p.title}: gap or ratio and prices by date"></canvas></div>
-      <div class="curve-block" id="eCv${i}"></div>
-      <p class="hint lad-note" id="eN${i}"></p>`;
+      <div class="chart-box" id="${P}Box${i}"><canvas id="${P}C${i}" role="img" aria-label="${p.title}: gap or ratio and prices by date"></canvas></div>
+      <div class="curve-block" id="${P}Cv${i}"></div>
+      <p class="hint lad-note" id="${P}N${i}"></p>`;
     host.appendChild(sec);
   });
 }
@@ -1358,27 +1380,27 @@ function buildPanels(){
 async function load(){
   buildPanels();
   try{
-    const r=await fetch("data/energy.json",{cache:"no-store"});
+    const r=await fetch(cfg.data,{cache:"no-store"});
     if(!r.ok) throw new Error(r.status);
     D=await r.json();
-  }catch(e){ $("eSrc").textContent="Couldn't load the energy data (data/energy.json). It's created by the daily workflow; run it once from the Actions tab."; return; }
+  }catch(e){ $(P+"Src").textContent=`Couldn't load the ${cfg.what} data (${cfg.data}). It's created by the data workflow; run it once from the Actions tab (or use Update data now).`; return; }
   dates=D.dates; ts=dates.map(d=>Date.parse(d+"T00:00:00Z"));
-  $("eUpd").innerHTML = `Data last updated by GitHub: <b>${sgTime(D.generated)}</b>` + (Object.keys(D.meta).some(isLive) ? ` · ${LIVE_TAG} = still trading at that time` : "");
-  try{ const rc=await fetch("data/curve.json",{cache:"no-store"}); if(rc.ok) CV=await rc.json(); }catch(e){ CV=null; }
-  $("eQuick").value="1y";
-  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(o.start) $("eStart").value=o.start; if(o.quick!==undefined) $("eQuick").value=o.quick; $("ePrices").checked=o.prices!==false; if(Array.isArray(o.modes)) modes=PAIRS.map((_,i)=>o.modes[i]==="ratio"?"ratio":"gap"); if(Array.isArray(o.cv)) cvShow=PAIRS.map((_,i)=>o.cv[i]!==false); } }catch(e){}
+  $(P+"Upd").innerHTML = `Data last updated by GitHub: <b>${sgTime(D.generated)}</b>` + (Object.keys(D.meta).some(isLive) ? ` · ${LIVE_TAG} = still trading at that time` : "");
+  try{ const rc=await fetch(cfg.curve,{cache:"no-store"}); if(rc.ok) CV=await rc.json(); }catch(e){ CV=null; }
+  $(P+"Quick").value="1y";
+  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){ if(o.start) $(P+"Start").value=o.start; if(o.quick!==undefined) $(P+"Quick").value=o.quick; $(P+"Prices").checked=o.prices!==false; if(Array.isArray(o.modes)) modes=PAIRS.map((_,i)=>MODES.includes(o.modes[i])?o.modes[i]:cfg.defMode); if(Array.isArray(o.cv)) cvShow=PAIRS.map((_,i)=>o.cv[i]!==false); } }catch(e){}
   render();
 }
-function save(){ try{ localStorage.setItem(LK, JSON.stringify({start:$("eStart").value, quick:$("eQuick").value, prices:$("ePrices").checked, modes, cv:cvShow})); }catch(e){} }
+function save(){ try{ localStorage.setItem(LK, JSON.stringify({start:$(P+"Start").value, quick:$(P+"Quick").value, prices:$(P+"Prices").checked, modes, cv:cvShow})); }catch(e){} }
 
 function firstIdx(k){ const v=D.series[k]; if(!v) return -1; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
 function applyQuick(minIdx){
-  const q=$("eQuick").value; if(!q) return;
-  if(q==="all"){ $("eStart").value=dates[minIdx]; return; }
+  const q=$(P+"Quick").value; if(!q) return;
+  if(q==="all"){ $(P+"Start").value=dates[minIdx]; return; }
   const last=new Date(dates[dates.length-1]+"T00:00:00"); let t=new Date(last);
   if(q==="ytd") t=new Date(last.getFullYear(),0,1);
   else { const n=parseInt(q,10); if(q.endsWith("m")) t.setMonth(t.getMonth()-n); else t.setFullYear(t.getFullYear()-n); }
-  const want=iso(t); $("eStart").value = want<dates[minIdx] ? dates[minIdx] : (dates.find(d=>d>=want)||dates[minIdx]);
+  const want=iso(t); $(P+"Start").value = want<dates[minIdx] ? dates[minIdx] : (dates.find(d=>d>=want)||dates[minIdx]);
 }
 
 function render(depth){
@@ -1386,77 +1408,88 @@ function render(depth){
   if(typeof depth!=="number" || depth>5) depth=0;   // called from listeners with an event or a timestamp
   const firsts=Object.keys(D.series).map(firstIdx).filter(i=>i>=0);
   const minIdx=Math.min(...firsts);
-  $("eStart").min=dates[minIdx]; $("eStart").max=dates[dates.length-1];
+  $(P+"Start").min=dates[minIdx]; $(P+"Start").max=dates[dates.length-1];
   applyQuick(minIdx);
-  let st=$("eStart").value; if(!st||st<dates[minIdx]){ st=dates[minIdx]; $("eStart").value=st; }
-  if(st>dates[dates.length-1]){ st=dates[dates.length-1]; $("eStart").value=st; }
+  let st=$(P+"Start").value; if(!st||st<dates[minIdx]){ st=dates[minIdx]; $(P+"Start").value=st; }
+  if(st>dates[dates.length-1]){ st=dates[dates.length-1]; $(P+"Start").value=st; }
   const sIdx=Math.max(minIdx, dates.findIndex(d=>d>=st));
   save();
   const upd=new Date(D.generated).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-  const tick=Object.entries(D.meta).map(([k,m])=>`${m.name} ${m.ticker}${m.unit&&m.unit!=="USD/bbl"?` (${m.unit})`:""}`).join(", ");
-  $("eSrc").textContent=`Front-month futures from Yahoo Finance (UK gasoil from OilPriceAPI), updated ${upd}: ${tick}.${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")}.`:""} Weekdays with no settlement carry the previous price forward. Front-month series can jump on contract roll dates.`;
+  const tick=Object.entries(D.meta).map(([k,m])=>`${m.name} ${m.ticker}${m.unit&&m.unit!==cfg.unit?` (${m.unit})`:""}`).join(", ");
+  $(P+"Src").textContent=`${cfg.srcLead}, updated ${upd}: ${tick}.${D.failed&&D.failed.length?` Last update could not download: ${D.failed.join(", ")}.`:""} Weekdays with no settlement carry the previous price forward. Front-month series can jump on contract roll dates.`;
   PAIRS.forEach((p,i)=>renderPair(p,i,sIdx));
 }
 
 // futures curve table: next 12 contract months traded by both legs, from data/curve.json
 function renderCurve(p,i){
-  const host=$("eCv"+i); if(!host) return;
+  const host=$(P+"Cv"+i); if(!host) return;
   const c = CV && CV.pairs ? CV.pairs.find(x=>x.a===p.a && x.b===p.b) : null;
   if(!c || !c.rows || !c.rows.length){ host.innerHTML=""; return; }
   const R = modes[i]==="ratio";
   const mon = m => new Date(m+"-01T00:00:00Z").toLocaleDateString("en-US",{month:"short",year:"numeric",timeZone:"UTC"});
   const sd = d => new Date(d+"T00:00:00Z").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
   const today = Date.parse(new Date().toISOString().slice(0,10)+"T00:00:00Z");
-  const rows = c.rows.map(r=>{ const a=r.a.bbl, b=r.b.bbl, ok=a!=null && b!=null;
+  // price per leg in the common unit (energy: USD/bbl in "bbl"; metals: USD/oz in "px"). A metal month that only one metal
+  // trades gets the other metal's price interpolated (by last trading day) between its neighbouring contracts: "≈".
+  const {dp, SC, A, B, xs} = pairOpt(p);
+  const legs = c.rows.map(r=>({a:{...r.a, v: r.a.px!=null ? r.a.px : r.a.bbl}, b:{...r.b, v: r.b.px!=null ? r.b.px : r.b.bbl}}));
+  if(cfg.interp) ["a","b"].forEach(s=>{ const known=legs.map((l,k)=>l[s].v!=null?k:-1).filter(k=>k>=0);
+    legs.forEach(l=>{ const x=l[s]; if(x.v!=null) return;
+      const t=Date.parse(x.expiry+"T00:00:00Z"); let lo=null, hi=null;
+      known.forEach(k=>{ const y=legs[k][s], ty=Date.parse(y.expiry+"T00:00:00Z"); if(ty<t) lo={ty,v:y.v}; else if(ty>t && !hi) hi={ty,v:y.v}; });
+      if(lo && hi){ x.v = lo.v + (hi.v-lo.v)*(t-lo.ty)/(hi.ty-lo.ty); x.est = true; } }); });
+  const rows = c.rows.map((r0,k)=>{ const r={...r0, a:legs[k].a, b:legs[k].b}; const a=r.a.v, b=r.b.v, ok=a!=null && b!=null;
     const exp = r.a.expiry<r.b.expiry ? r.a.expiry : r.b.expiry;
-    return {...r, ok, gap: ok? a-b : null, ratio: ok && b>0 ? a/b : null, exp, days: Math.round((Date.parse(exp+"T00:00:00Z")-today)/864e5)}; });
+    return {...r, ok, est: r.a.est||r.b.est, gap: ok? a-b : null, ratio: ok && b>0 ? a/b*SC : null, exp, days: Math.round((Date.parse(exp+"T00:00:00Z")-today)/864e5)}; });
   const key = R ? "ratio" : "gap", vals = rows.filter(r=>r[key]!=null).map(r=>r[key]);
   const hi = vals.length ? Math.max(...vals) : null, lo = vals.length ? Math.min(...vals) : null;
   const latest = rows.reduce((m,r)=>[r.a.date,r.b.date].reduce((x,d)=>d&&d>x?d:x,m),"");
-  const px = (leg) => leg.bbl==null ? "—" : `<span title="${leg.ticker}: ${leg.native} ${leg.unit}${leg.date?`, settlement ${sd(leg.date)}`:""}">${num(leg.bbl)}${leg.date && leg.date<latest?" *":""}</span>`;
-  const cls = (leg) => leg.bbl==null || (leg.date && leg.date<latest) ? "stale" : "";
-  const g = r => r.gap==null ? "—" : sg(r.gap), q = r => r.ratio==null ? "—" : r.ratio.toFixed(4);
+  const px = (leg) => leg.v==null ? "—" : leg.est ? `<span title="${leg.ticker}: no price on Yahoo (not a regular contract month); estimated between the neighbouring contracts">≈ ${pn(leg.v,leg.unit)}</span>` : `<span title="${leg.ticker}: ${leg.native!=null?leg.native:leg.v} ${leg.unit}${leg.date?`, settlement ${sd(leg.date)}`:""}">${pn(leg.v,leg.unit)}${leg.date && leg.date<latest?" *":""}</span>`;
+  const cls = (leg) => leg.v==null || leg.est || (leg.date && leg.date<latest) ? "stale" : "";
+  const g = r => r.gap==null ? "—" : sg(r.gap), q = r => r.ratio==null ? "—" : (r.est?"≈ ":"")+r.ratio.toFixed(dp);
+  const GAP = MODES.includes("gap");
   const kfmt = n => n==null ? "—" : n>=1e6 ? (n/1e6).toFixed(n>=1e7?0:1)+"M" : n>=1e3 ? (n/1e3).toFixed(n>=1e4?0:1)+"k" : String(n);
   const two = (x,y,lab) => `<span title="${nameOf(p.a)} ${lab}: ${x==null?"not available":x.toLocaleString("en-US")}; ${nameOf(p.b)} ${lab}: ${y==null?"not available":y.toLocaleString("en-US")}">${kfmt(x)} / ${kfmt(y)}</span>`;
   const mark = (r,k) => (!R&&k==="gap"||R&&k==="ratio") && r[k]!=null && (r[k]===hi||r[k]===lo) ? " hi" : "";
   const dA=[...new Set(rows.map(r=>r.a.date).filter(Boolean))].sort().pop(), dB=[...new Set(rows.map(r=>r.b.date).filter(Boolean))].sort().pop();
   const on = cvShow[i];
   host.innerHTML = `<div class="txhead"><h4>Futures curve: next ${rows.length} contract months</h4>
-      <button class="ghost" type="button" data-cv="${i}" aria-expanded="${on}" aria-controls="eCvB${i}">${on?"Hide table":"Show table"}</button></div>
-    <div id="eCvB${i}"${on?"":" hidden"}>
+      <button class="ghost" type="button" data-cv="${i}" aria-expanded="${on}" aria-controls="${P}CvB${i}">${on?"Hide table":"Show table"}</button></div>
+    <div id="${P}CvB${i}"${on?"":" hidden"}>
     <div class="table-wrap"><table class="pair-table curve-table">
       <thead><tr><th class="txt">Contract</th><th>Last trading day</th><th>Days left</th>
-        <th>${nameOf(p.a)}<br>(USD/bbl)</th><th>${nameOf(p.b)}<br>(USD/bbl)</th><th>Gap ${p.a} − ${p.b}<br>(USD/bbl)</th><th>Ratio<br>${p.a} ÷ ${p.b}</th><th>Volume<br>${p.a} / ${p.b}</th><th>Open interest<br>${p.a} / ${p.b}</th></tr></thead>
+        <th>${nameOf(p.a)}<br>(${unitOf(p.a)})</th><th>${nameOf(p.b)}<br>(${unitOf(p.b)})</th>${GAP?`<th>Gap ${A} − ${B}<br>(${cfg.unit})</th>`:""}<th>Ratio<br>${A} ÷ ${B}${xs}</th><th>Volume<br>${A} / ${B}</th><th>Open interest<br>${A} / ${B}</th></tr></thead>
       <tbody>${rows.map(r=>`<tr><td class="txt">${mon(r.month)}</td><td>${sd(r.exp)}</td><td>${r.days}</td>
         <td class="${cls(r.a)}">${px(r.a)}</td><td class="${cls(r.b)}">${px(r.b)}</td>
-        <td class="${r.gap==null?"":r.gap>=0?"pp":"pn"}${mark(r,"gap")}">${g(r)}</td><td class="${mark(r,"ratio")}">${q(r)}</td><td>${two(r.a.vol,r.b.vol,"volume")}</td><td>${two(r.a.oi,r.b.oi,"open interest")}</td></tr>`).join("")}</tbody>
+        ${GAP?`<td class="${r.gap==null?"":r.gap>=0?"pp":"pn"}${mark(r,"gap")}">${g(r)}</td>`:""}<td class="${mark(r,"ratio")}${r.est?" stale":""}">${q(r)}</td><td>${two(r.a.vol,r.b.vol,"volume")}</td><td>${two(r.a.oi,r.b.oi,"open interest")}</td></tr>`).join("")}</tbody>
     </table></div>
-    <p class="hint lad-note">Latest settlements: ${nameOf(p.a)} ${dA?sd(dA):"—"}, ${nameOf(p.b)} ${dB?sd(dB):"—"}. * = an older settlement (no newer price for that contract). Bold = highest and lowest ${R?"ratio":"gap"} on the curve. Last trading day is approximate (exchange holidays ignored) and is the earlier of the two contracts; a new month is added when the nearest one expires. Hover a price for its ticker and native price (heating oil and gasoline in USD/gal × 42, gasoil in USD/t ÷ 7.45). Volume = contracts traded on the settlement day; open interest = contracts still open (k = thousand); hover for exact numbers. "—" = not available (OilPriceAPI gives no open interest for gasoil).</p></div>`;
+    <p class="hint lad-note">Latest settlements: ${nameOf(p.a)} ${dA?sd(dA):"—"}, ${nameOf(p.b)} ${dB?sd(dB):"—"}. * = an older settlement (no newer price for that contract). Bold = highest and lowest ${R?"ratio":"gap"} on the curve. Last trading day is approximate (exchange holidays ignored)${cfg.interp?"":" and is the earlier of the two contracts"}; a new month is added when the nearest one expires. ${cfg.curveNote}</p></div>`;
 }
 
 function renderPair(p,i,sIdx){
   renderCurve(p,i);
   const va=D.series[p.a], vb=D.series[p.b];
-  $("eLA"+i).innerHTML=nameOf(p.a)+(isLive(p.a)?LIVE_TAG:""); $("eLB"+i).innerHTML=nameOf(p.b)+(isLive(p.b)?LIVE_TAG:"");
+  $(P+"LA"+i).innerHTML=nameOf(p.a)+(isLive(p.a)?LIVE_TAG:""); $(P+"LB"+i).innerHTML=nameOf(p.b)+(isLive(p.b)?LIVE_TAG:"");
   // Gap (A − B, USD/bbl) or Ratio (A ÷ B): every figure, band and the chart follow this choice
   const R = modes[i]==="ratio", W = R?"ratio":"gap", Wc = R?"Ratio":"Gap";
   document.querySelectorAll(`.e-mode button[data-i="${i}"]`).forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.m===modes[i])));
-  $("eU"+i).textContent = R ? `${p.a} ÷ ${p.b} (no unit)` : "USD per barrel";
-  $("eKG"+i).innerHTML=`${Wc}<br>(last date)`; $("eKAv"+i).textContent=`Average ${W}`; $("eKHi"+i).textContent=`Highest ${W}`;
-  $("eKLo"+i).textContent=`Lowest ${W}`; $("eKSd"+i).innerHTML=`Std dev (σ)<br>of ${W}`; $("eKZ"+i).innerHTML=`Latest ${W}<br>vs average`;
-  const fv = x => R ? x.toFixed(4) : sg(x);            // a gap is signed USD/bbl, a ratio has 4 decimals
-  const valAt = j => (va[j]==null||vb[j]==null) ? null : R ? (vb[j]>0 ? va[j]/vb[j] : NaN) : va[j]-vb[j];
-  const box=$("eBox"+i);
+  const {dp, SC, A, B, xs} = pairOpt(p);
+  $(P+"U"+i).textContent = R ? (p.note || cfg.ratioNote || `${A} ÷ ${B} (no unit)`) : cfg.unitLong;
+  $(P+"KG"+i).innerHTML=`${Wc}<br>(last date)`; $(P+"KAv"+i).textContent=`Average ${W}`; $(P+"KHi"+i).textContent=`Highest ${W}`;
+  $(P+"KLo"+i).textContent=`Lowest ${W}`; $(P+"KSd"+i).innerHTML=`Std dev (σ)<br>of ${W}`; $(P+"KZ"+i).innerHTML=`Latest ${W}<br>vs average`;
+  const fv = x => R ? x.toFixed(dp) : sg(x);           // a gap is signed, a ratio has cfg.ratioDp decimals
+  const valAt = j => (va[j]==null||vb[j]==null) ? null : R ? (vb[j]>0 ? va[j]/vb[j]*SC : NaN) : va[j]-vb[j];
+  const box=$(P+"Box"+i);
   if(!va||!vb){
     const miss=[!va&&p.a,!vb&&p.b].filter(Boolean).map(nameOf).join(" and ");
     if(charts[i]){charts[i].destroy();charts[i]=null;}
-    box.hidden=true; ["eVA","eVB","eVG","eVAv","eVHi","eVLo","eVSd","eVZ"].forEach(id=>{ $(id+i).textContent="—"; $(id+i).className=""; });
-    $("eN"+i).textContent=`No data for ${miss} yet. The daily workflow adds it once its download works.`;
+    box.hidden=true; [P+"VA",P+"VB",P+"VG",P+"VAv",P+"VHi",P+"VLo",P+"VSd",P+"VZ"].forEach(id=>{ $(id+i).textContent="—"; $(id+i).className=""; });
+    $(P+"N"+i).textContent=`No data for ${miss} yet. The daily workflow adds it once its download works.`;
     return;
   }
   box.hidden=false;
   let s0=sIdx; while(s0<dates.length && (va[s0]==null||vb[s0]==null)) s0++;
-  if(s0>=dates.length){ $("eN"+i).textContent="No dates where both prices exist."; return; }
+  if(s0>=dates.length){ $(P+"N"+i).textContent="No dates where both prices exist."; return; }
   const pA=[],pB=[],pG=[]; let sum=0,n=0,hi=-Infinity,lo=Infinity,iHi=s0,iLo=s0,holes=0,nonpos=0,last=null;
   for(let j=s0;j<dates.length;j++){
     pA.push({x:ts[j],y:va[j]}); pB.push({x:ts[j],y:vb[j]});
@@ -1464,40 +1497,42 @@ function renderPair(p,i,sIdx){
     if(g==null){ pG.push({x:ts[j],y:null}); holes++; continue; }        // hole in the source data: left empty
     if(Number.isNaN(g)){ pG.push({x:ts[j],y:null}); nonpos++; continue; } // ratio undefined: B at or below zero
     pG.push({x:ts[j],y:g}); sum+=g; n++; last=g; if(g>hi){hi=g;iHi=j;} if(g<lo){lo=g;iLo=j;} }
-  if(!n){ $("eN"+i).textContent="No dates with a value to show."; return; }
+  if(!n){ $(P+"N"+i).textContent="No dates with a value to show."; return; }
   const avg=sum/n;
   const sd=Math.sqrt(pG.reduce((t,q)=>q.y==null?t:t+(q.y-avg)**2,0)/n);
   const zOf=g=> sd>0 ? (g-avg)/sd : 0;
   const PINK="#D4537E";
   const band=z=>{ const a=Math.abs(z); return a>3?"red":a>2?"pink":"in"; };
   const set=(id,v,signed)=>{ $(id+i).textContent=signed?fv(v):num(v); $(id+i).className=signed&&!R?(v>=0?"pos":"neg"):""; };
-  set("eVA",va[dates.length-1],false); set("eVB",vb[dates.length-1],false);
-  set("eVG",last,true); set("eVAv",avg,true); set("eVHi",hi,true); set("eVLo",lo,true);
-  $("eVHi"+i).title=fmtD(dates[iHi]); $("eVLo"+i).title=fmtD(dates[iLo]);
-  $("eVSd"+i).textContent=R?sd.toFixed(4):num(sd); $("eVSd"+i).className="";
+  set(P+"VA",va[dates.length-1],false); set(P+"VB",vb[dates.length-1],false);
+  if(cfg.units){ $(P+"VA"+i).textContent=pn(va[dates.length-1],unitOf(p.a)); $(P+"VB"+i).textContent=pn(vb[dates.length-1],unitOf(p.b)); }
+  set(P+"VG",last,true); set(P+"VAv",avg,true); set(P+"VHi",hi,true); set(P+"VLo",lo,true);
+  $(P+"VHi"+i).title=fmtD(dates[iHi]); $(P+"VLo"+i).title=fmtD(dates[iLo]);
+  $(P+"VSd"+i).textContent=R?sd.toFixed(dp):num(sd); $(P+"VSd"+i).className="";
   const bc=g=>{ const b=band(zOf(g)); return b==="red"?"neg":b==="pink"?"pinkv":""; };
-  $("eVAv"+i).className=""; $("eVHi"+i).className=bc(hi); $("eVLo"+i).className=bc(lo);
-  const zL=zOf(last); $("eVZ"+i).textContent=(zL>0.005?"+":zL<-0.005?"−":"")+Math.abs(zL).toFixed(2)+"σ";
-  $("eVZ"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
-  $("eVG"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
+  $(P+"VAv"+i).className=""; $(P+"VHi"+i).className=bc(hi); $(P+"VLo"+i).className=bc(lo);
+  const zL=zOf(last); $(P+"VZ"+i).textContent=(zL>0.005?"+":zL<-0.005?"−":"")+Math.abs(zL).toFixed(2)+"σ";
+  $(P+"VZ"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
+  $(P+"VG"+i).className = band(zL)==="red"?"neg":band(zL)==="pink"?"pinkv":"";
   const few=n<20;
-  $("eN"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + (few?`Only ${n} day${n>1?"s":""} of data so far; the average, σ and bands become meaningful after a few weeks. `:"") + (holes?`${holes} weekday${holes>1?"s":""} with no source data ${holes>1?"are":"is"} left empty and not counted. `:"") + (nonpos?`${nonpos} day${nonpos>1?"s":""} where ${nameOf(p.b)} was zero or negative ${nonpos>1?"have":"has"} no ratio and ${nonpos>1?"are":"is"} left out. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
+  $(P+"N"+i).textContent = (s0>sIdx?`This pair's data starts on ${fmtD(dates[s0])}. `:"") + (few?`Only ${n} day${n>1?"s":""} of data so far; the average, σ and bands become meaningful after a few weeks. `:"") + (holes?`${holes} weekday${holes>1?"s":""} with no source data ${holes>1?"are":"is"} left empty and not counted. `:"") + (nonpos?`${nonpos} day${nonpos>1?"s":""} where ${nameOf(p.b)} was zero or negative ${nonpos>1?"have":"has"} no ratio and ${nonpos>1?"are":"is"} left out. `:"") + `Latest prices: ${nameOf(p.a)} ${fmtD(D.meta[p.a].last)}, ${nameOf(p.b)} ${fmtD(D.meta[p.b].last)}.`;
 
   const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
-  const showP=$("ePrices").checked;
+  const showP=$(P+"Prices").checked;
   const tA=(D.meta[p.a]||{}).ticker||p.a, tB=(D.meta[p.b]||{}).ticker||p.b;
   const colOf=z=>{ const b=band(z); return b==="red"?red:b==="pink"?PINK:ink; };
   const x0=ts[s0], x1=ts[ts.length-1], hl=(y,label,color,dash,w)=>({ label, data:[{x:x0,y},{x:x1,y}], parsing:false, yAxisID:"y", borderColor:color, borderWidth:w, borderDash:dash, pointRadius:0, fill:false, isRef:true });
-  const ds=[{ label: R ? `Ratio ${tA} ÷ ${tB}` : `Gap ${tA} − ${tB}`, data:pG, parsing:false, yAxisID:"y", borderWidth:2, tension:0, borderColor:ink, fill:false,
+  const ds=[{ label: R ? `Ratio ${tA} ÷ ${tB}${xs}` : `Gap ${tA} − ${tB}`, data:pG, parsing:false, yAxisID:"y", borderWidth:2, tension:0, borderColor:ink, fill:false,
     pointRadius:c=>{ const v=c.raw&&c.raw.y; return v==null?0:few?3:band(zOf(v))==="in"?0:2.6; },
     pointHoverRadius:c=>{ const v=c.raw&&c.raw.y; return v==null||band(zOf(v))==="in"?3:4.5; },
     pointBackgroundColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderWidth:0 },
     hl(avg,`Average ${W}`,muted,[],1),
     hl(avg+2*sd,"±2σ",PINK,[6,4],1.2), hl(avg-2*sd,"±2σ",PINK,[6,4],1.2),
     hl(avg+3*sd,"±3σ",red,[3,3],1.2),  hl(avg-3*sd,"±3σ",red,[3,3],1.2)];
+  const SPLIT = !!cfg.splitPrices;                       // prices far apart (gold vs silver): one price axis each
   if(showP){
     ds.push({ label:`${nameOf(p.a)} (${tA})`, data:pA, parsing:false, yAxisID:"y2", borderColor:CA, borderWidth:1.4, pointRadius:0, borderDash:[7,4], fill:false });
-    ds.push({ label:`${nameOf(p.b)} (${tB})`, data:pB, parsing:false, yAxisID:"y2", borderColor:CB, borderWidth:1.4, pointRadius:0, borderDash:[3,3], fill:false });
+    ds.push({ label:`${nameOf(p.b)} (${tB})`, data:pB, parsing:false, yAxisID:SPLIT?"y3":"y2", borderColor:CB, borderWidth:1.4, pointRadius:0, borderDash:[3,3], fill:false });
   }
   const long=(ts[ts.length-1]-ts[s0])>3*365*864e5;
   const opts={ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"nearest",axis:"x",intersect:false},
@@ -1505,8 +1540,9 @@ function renderPair(p,i,sIdx){
       x:{ type:"linear", min:ts[s0], max:ts[ts.length-1],
           afterBuildTicks: long ? (ax=>{ const t=[]; const y0=new Date(ax.min).getUTCFullYear(), y1=new Date(ax.max).getUTCFullYear(); const step=Math.max(1,Math.ceil((y1-y0+1)/10)); for(let y=y0;y<=y1;y+=step){ const v=Date.UTC(y,0,1); if(v>=ax.min&&v<=ax.max) t.push({value:v}); } if(t.length>=2) ax.ticks=t; }) : undefined,
           ticks:{color:muted,maxTicksLimit:8,callback:v=>new Date(v).toLocaleDateString("en-US",long?{year:"numeric",timeZone:"UTC"}:{month:"short",year:"2-digit",timeZone:"UTC"})}, grid:{color:line} },
-      y:{ position:"left", title:{display:true,text:R?`Ratio (${p.a} ÷ ${p.b})`:"Gap (USD/bbl)",color:muted}, ticks:{color:muted}, grid:{color:c=>c.tick.value===(R?1:0)?ink:line, lineWidth:c=>c.tick.value===(R?1:0)?1.5:1} },
-      y2:{ display:showP, position:"right", title:{display:true,text:"Price (USD/bbl)",color:muted}, ticks:{color:muted}, grid:{drawOnChartArea:false} }
+      y:{ position:"left", title:{display:true,text:R?`Ratio (${A} ÷ ${B}${xs})`:`Gap (${cfg.unit})`,color:muted}, ticks:{color:muted}, grid:{color:c=>c.tick.value===(R?(SC===1?1:NaN):0)?ink:line, lineWidth:c=>c.tick.value===(R?(SC===1?1:NaN):0)?1.5:1} },
+      y2:{ display:showP, position:"right", title:{display:true,text:SPLIT?`${nameOf(p.a)} (${unitOf(p.a)})`:`Price (${cfg.unit})`,color:SPLIT?CA:muted}, ticks:{color:SPLIT?CA:muted}, grid:{drawOnChartArea:false} },
+      ...(SPLIT ? { y3:{ display:showP, position:"right", title:{display:true,text:`${nameOf(p.b)} (${unitOf(p.b)})`,color:CB}, ticks:{color:CB}, grid:{drawOnChartArea:false} } } : {})
     },
     spanGaps:false,
     plugins:{ decimation:{enabled:!holes&&!nonpos,algorithm:"lttb",samples:900},
@@ -1515,19 +1551,39 @@ function renderPair(p,i,sIdx){
         label:it=>`${it.dataset.label}: ${it.dataset.yAxisID==="y"?fv(it.parsed.y)+(it.dataset.isRef?"":`  (${(zOf(it.parsed.y)>=0?"+":"−")+Math.abs(zOf(it.parsed.y)).toFixed(2)}σ)`):num(it.parsed.y)}` } } } };
   if(!window.Chart) return;
   if(charts[i]){ charts[i].data.datasets=ds; charts[i].options=opts; charts[i].update(); }
-  else charts[i]=new Chart($("eC"+i),{type:"line",data:{datasets:ds},options:opts});
+  else charts[i]=new Chart($(P+"C"+i),{type:"line",data:{datasets:ds},options:opts});
 }
 
-$("eQuick").addEventListener("change",render);
-$("eStart").addEventListener("change",()=>{ $("eQuick").value=""; render(); });
-$("ePrices").addEventListener("change",render);
-$("ePanels").addEventListener("click",e=>{ const t=e.target.closest("button[data-cv]"); if(!t) return;
+$(P+"Quick").addEventListener("change",render);
+$(P+"Start").addEventListener("change",()=>{ $(P+"Quick").value=""; render(); });
+$(P+"Prices").addEventListener("change",render);
+$(P+"Panels").addEventListener("click",e=>{ const t=e.target.closest("button[data-cv]"); if(!t) return;
   const i=+t.dataset.cv; cvShow[i]=!cvShow[i]; save(); renderCurve(PAIRS[i], i); });
-$("ePanels").addEventListener("click",e=>{ const b=e.target.closest(".e-mode button"); if(!b) return; const i=+b.dataset.i;
+$(P+"Panels").addEventListener("click",e=>{ const b=e.target.closest(".e-mode button"); if(!b) return; const i=+b.dataset.i;
   if(modes[i]===b.dataset.m) return; modes[i]=b.dataset.m; render(); });
-document.querySelectorAll('.tabs button[data-view="energy"]').forEach(b=>b.addEventListener("click",()=>{ charts.forEach((c,i)=>{ if(c){c.destroy();charts[i]=null;} }); requestAnimationFrame(render); }));
+document.querySelectorAll(`.tabs button[data-view="${cfg.view}"]`).forEach(b=>b.addEventListener("click",()=>{ charts.forEach((c,i)=>{ if(c){c.destroy();charts[i]=null;} }); requestAnimationFrame(render); }));
 const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ charts.forEach((c,i)=>{ if(c){c.destroy();charts[i]=null;} }); render(); });
 load();
+}
+pairTab({ p:"e", view:"energy", what:"energy", lk:"finmon-energy-v1", data:"data/energy.json", curve:"data/curve.json",
+  pairs:[ { a:"BRENT", b:"WTI", title:"Brent − WTI" },
+          { a:"HO",    b:"RB",  title:"US heating oil − US gasoline" },
+          { a:"HO",    b:"GO",  title:"US heating oil − UK gasoil" } ],
+  names:{BRENT:"Brent crude", WTI:"WTI crude (Texas)", HO:"US heating oil", RB:"US gasoline (RBOB)", GO:"UK gasoil (ICE)"},
+  modes:["gap","ratio"], defMode:"gap", ratioDp:4, unit:"USD/bbl", unitLong:"USD per barrel",
+  srcLead:"Front-month futures from Yahoo Finance (UK gasoil from OilPriceAPI)",
+  curveNote:'Hover a price for its ticker and native price (heating oil and gasoline in USD/gal × 42, gasoil in USD/t ÷ 7.45). Volume = contracts traded on the settlement day; open interest = contracts still open (k = thousand); hover for exact numbers. "—" = not available (OilPriceAPI gives no open interest for gasoil).' });
+pairTab({ p:"m", view:"metal", what:"metal", lk:"finmon-metal-v1", data:"data/metals.json", curve:"data/metal_curve.json",
+  pairs:[ { a:"GOLD", b:"SILVER", title:"Gold ÷ silver", note:"ounces of silver per ounce of gold" },
+          { a:"GOLD", b:"PLATINUM", title:"Gold ÷ platinum", note:"ounces of platinum per ounce of gold" },
+          { a:"PLATINUM", b:"PALLADIUM", title:"Platinum ÷ palladium", note:"ounces of palladium per ounce of platinum", dp:3 },
+          { a:"COPPER", b:"GOLD", title:"Copper ÷ gold", note:"copper (USD/lb) ÷ gold (USD/oz) × 1,000", dp:3, scale:1000 } ],
+  names:{GOLD:"Gold (COMEX)", SILVER:"Silver (COMEX)", PLATINUM:"Platinum (NYMEX)", PALLADIUM:"Palladium (NYMEX)", COPPER:"Copper (COMEX)"},
+  short:{GOLD:"Gold", SILVER:"Silver", PLATINUM:"Platinum", PALLADIUM:"Palladium", COPPER:"Copper"},
+  units:{GOLD:"USD/oz", SILVER:"USD/oz", PLATINUM:"USD/oz", PALLADIUM:"USD/oz", COPPER:"USD/lb"},
+  modes:["ratio"], defMode:"ratio", ratioDp:2, unit:"USD/oz", unitLong:"USD per troy ounce", splitPrices:true, interp:true,
+  srcLead:"Front-month futures from Yahoo Finance (COMEX gold, silver, copper; NYMEX platinum, palladium)",
+  curveNote:'Metals list different contract months: gold Feb, Apr, Jun, Aug, Oct, Dec; silver Jan, Mar, May, Jul, Sep, Dec; platinum Jan, Apr, Jul, Oct; palladium Mar, Jun, Sep, Dec; copper every month; all of them also the nearest few months. Where only one metal has a contract, the other metal\'s price is estimated between its neighbouring contracts and shown in grey with "≈". Hover a price for its ticker. Volume = contracts traded on the settlement day; open interest = contracts still open (k = thousand); hover for exact numbers. "—" = not available.' });
 })();
 </script>
 <script>

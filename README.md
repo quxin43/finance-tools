@@ -53,6 +53,19 @@ Front-month continuous futures from Yahoo (`GC=F` gold, `SI=F` silver, `HG=F` co
 
 The futures-curve tables use Yahoo's monthly tickers (for example `GCZ26.CMX`, `PLF27.NYM`) and are saved in `data/metal_curve.json`. Metals list different months (gold Feb/Apr/Jun/Aug/Oct/Dec, silver Jan/Mar/May/Jul/Sep/Dec, platinum Jan/Apr/Jul/Oct, palladium Mar/Jun/Sep/Dec, copper every month, all of them the nearest few months), so where only one metal of a pair has a contract the page estimates the other metal's price between its neighbouring contracts and marks it "≈". Last trading day: third-last business day of the delivery month.
 
+## Agri gap tab
+
+Four panels from US contracts traded on CMC, each with a Gap/Ratio switch, the usual average and σ bands, and a futures-curve table:
+
+- **Soybeans ÷ corn** (default ratio): the US planting signal; new-crop November soybeans ÷ December corn above about 2.4 favours soybeans, below about 2.2 corn.
+- **Wheat − corn** (cents per bushel): feed-substitution spread.
+- **Soybean crush** = soybean meal (USD/short ton) × 2.2 + soybean oil (¢/lb) × 11 − soybeans (¢/bu): the processors' margin per bushel, in cents.
+- **Soybean oil − heating oil (BOHO)**, USD per gallon (soybean oil ¢/lb × 7.5 ÷ 100): the biodiesel margin gauge.
+
+Front-month continuous futures from Yahoo (`ZS=F`, `ZC=F`, `ZW=F`, `ZM=F`, `ZL=F` on CBOT; `HO=F` on NYMEX), saved in `data/agri.json` together with the computed crush value (`SOYPROD`) and soybean oil per gallon (`BOGAL`). Contract months come from Yahoo's monthly tickers (for example `ZSX26.CBT`) and are saved in `data/agri_curve.json`; months only one leg trades are estimated ("≈") as on the Metal ratio tab. Last trading day for CBOT contracts: the business day before the 15th of the delivery month.
+
+Not included: London white sugar, robusta coffee and UK cocoa (the other side of the popular sugar, coffee and cocoa spreads) are not on Yahoo Finance.
+
 ## Data rules
 
 - **History:** everything Yahoo has for each series (no cap). Each run merges the new download with the history already saved in `data/`, so the history only grows: if Yahoo ever returns a shorter history, the saved older days are kept (new values win where both exist). If a series switches to a fallback ticker, its history is not mixed with the old ticker's.

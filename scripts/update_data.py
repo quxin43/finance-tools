@@ -6,6 +6,7 @@ Download daily closes for the 13 indices from Yahoo Finance and write data/indic
 - Gaps (holidays, missing days): filled with the previous date's close, so that day counts as 0%.
 - If a download fails, that index keeps the data already in data/indices.json.
 - Energy futures go to data/energy.json. UK gasoil comes from OilPriceAPI (needs the OILPRICEAPI_KEY secret).
+- Soybeans, corn, wheat, soybean meal and oil (CBOT) and heating oil go to data/agri.json; contract months to data/agri_curve.json.
 - Gold, silver, platinum, palladium and copper go to data/metals.json; their contract months go to data/metal_curve.json.
 """
 import json
@@ -61,6 +62,25 @@ METALS = [
     ("PALLADIUM", "Palladium (NYMEX)",   "USD/oz", ["PA=F"], 1.0),
     ("COPPER",    "Copper (COMEX)",      "USD/lb", ["HG=F"], 1.0),
 ]
+
+# Agriculture (Yahoo CBOT front-month continuous; Yahoo quotes grains in US cents per bushel, soybean meal in USD per
+# short ton, soybean oil in US cents per pound). Heating oil is downloaded again here for the soy oil - heating oil pair.
+AGRI_OUT = DATA / "agri.json"
+AGRI = [
+    ("SOY",    "Soybeans (CBOT)",      "¢/bu",    ["ZS=F"], 1.0),
+    ("CORN",   "Corn (CBOT)",          "¢/bu",    ["ZC=F"], 1.0),
+    ("WHEAT",  "Wheat (CBOT)",         "¢/bu",    ["ZW=F"], 1.0),
+    ("MEAL",   "Soybean meal (CBOT)",  "USD/st",  ["ZM=F"], 1.0),
+    ("SOYOIL", "Soybean oil (CBOT)",   "¢/lb",    ["ZL=F"], 1.0),
+    ("HO",     "US heating oil",       "USD/gal", ["HO=F"], 1.0),
+]
+# Series computed from others: key -> (name, unit, [(source key, multiplier), ...]); value = sum of source x multiplier.
+# One bushel of soybeans crushes into about 44 lb of meal (0.022 short ton; x100 for cents) and 11 lb of oil.
+# One US gallon of soybean oil weighs about 7.5 lb (cents/lb x 7.5 / 100 = USD/gal).
+AGRI_DERIVED = {
+    "SOYPROD": ("Soy oil + meal (crush value)", "¢/bu", [("MEAL", 2.2), ("SOYOIL", 11.0)]),
+    "BOGAL":   ("Soybean oil (per gallon)",     "USD/gal", [("SOYOIL", 0.075)]),
+}
 
 # UK gasoil is not on Yahoo Finance. It comes from OilPriceAPI (free plan: 50 requests/day).
 # The API key is a GitHub secret (OILPRICEAPI_KEY). Each run adds the latest price; history builds up day by day.
@@ -348,7 +368,11 @@ CLOSE_AT = {
     # COMEX metals: same CME Globex hours as NYMEX energy
     "GOLD": ("America/New_York", 17.0), "SILVER": ("America/New_York", 17.0),
     "PLATINUM": ("America/New_York", 17.0), "PALLADIUM": ("America/New_York", 17.0), "COPPER": ("America/New_York", 17.0),
+    # CBOT grains: day session ends 13:20 Chicago; the evening session (19:00) belongs to the next trade date
+    "SOY": ("America/Chicago", 13.25), "CORN": ("America/Chicago", 13.25), "WHEAT": ("America/Chicago", 13.25),
+    "MEAL": ("America/Chicago", 13.25), "SOYOIL": ("America/Chicago", 13.25),
 }
+CBOT_KEYS = ("SOY", "CORN", "WHEAT", "MEAL", "SOYOIL")
 CME_KEYS = ("BRENT", "WTI", "HO", "RB", "GOLD", "SILVER", "PLATINUM", "PALLADIUM", "COPPER")   # Sunday 18:00 to Friday 17:00 New York, daily break 17-18
 
 
@@ -370,6 +394,11 @@ def is_live(key, last_day, now):
         weekend = (wd == 4 and h >= 17) or wd == 5 or (wd == 6 and h < 18)
         in_break = 17 <= h < 18
         return not weekend and not in_break and (local.date() - d).days <= 1
+    if key in CBOT_KEYS:
+        # CBOT grains: Sunday-Friday 19:00-07:45 and Monday-Friday 08:30-13:20 Chicago time
+        weekend = (wd == 4 and h >= 13.34) or wd == 5 or (wd == 6 and h < 19)
+        open_now = h >= 19 or h < 7.75 or 8.5 <= h < 13.34
+        return not weekend and open_now and (local.date() - d).days <= 1
     return local.date() == d and wd < 5 and h < close_h   # an index is live on its own trading day before the close
 
 
@@ -433,7 +462,7 @@ def build(closes):
     return cal, pd.DataFrame(cols)
 
 
-def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=None, digits=2):
+def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=None, digits=2, derived=None):
     """Download one set of series and write its JSON file. Returns the list of failed keys."""
     existing = load_existing(out)
     closes, meta, failed = {}, {}, []
@@ -499,6 +528,17 @@ def run_set(label, items, out, start, end, now, allow_negative=False, min_rows=N
         return failed
     cal, df = build(closes)
     order = [it[0] for it in items if it[0] in df.columns]
+    for k, (name, unit, parts) in (derived or {}).items():   # computed series, e.g. soybean crush value
+        if not all(src in df.columns for src, _ in parts):
+            print(f"  {k}: not computed (missing {', '.join(src for src, _ in parts if src not in df.columns)})")
+            continue
+        df[k] = sum(df[src] * mult for src, mult in parts)
+        have = df[k].dropna()
+        meta[k] = {"name": name, "ticker": " + ".join(f"{meta[src]['ticker']} x {mult:g}" for src, mult in parts),
+                   "substitute": "", "unit": unit, "factor": 1.0, "derived": True,
+                   "first": have.index.min().strftime("%Y-%m-%d"), "last": have.index.max().strftime("%Y-%m-%d"),
+                   "live": any(meta[src].get("live") for src, _ in parts)}
+        order.append(k)
     data = {
         "generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "Yahoo Finance daily closes (yfinance)" + ("; UK gasoil from OilPriceAPI" if "GO" in order else ""),
@@ -686,11 +726,17 @@ def build_curve(now):
 
 # ---------------------------------------------------------------- metal futures curve (gold and silver, COMEX)
 METAL_CURVE_OUT = DATA / "metal_curve.json"
-# Yahoo root and exchange suffix of the monthly contracts, unit
-METAL_CURVE_LEGS = {"GOLD": ("GC", "CMX", "USD/oz"), "SILVER": ("SI", "CMX", "USD/oz"),
-                    "PLATINUM": ("PL", "NYM", "USD/oz"), "PALLADIUM": ("PA", "NYM", "USD/oz"),
-                    "COPPER": ("HG", "CMX", "USD/lb")}
+# Yahoo root, exchange suffix of the monthly contracts, unit, expiry rule
+METAL_CURVE_LEGS = {"GOLD": ("GC", "CMX", "USD/oz", "metal"), "SILVER": ("SI", "CMX", "USD/oz", "metal"),
+                    "PLATINUM": ("PL", "NYM", "USD/oz", "metal"), "PALLADIUM": ("PA", "NYM", "USD/oz", "metal"),
+                    "COPPER": ("HG", "CMX", "USD/lb", "metal")}
 METAL_CURVE_PAIRS = [("GOLD", "SILVER"), ("GOLD", "PLATINUM"), ("PLATINUM", "PALLADIUM"), ("COPPER", "GOLD")]
+
+AGRI_CURVE_OUT = DATA / "agri_curve.json"
+AGRI_CURVE_LEGS = {"SOY": ("ZS", "CBT", "¢/bu", "cbot"), "CORN": ("ZC", "CBT", "¢/bu", "cbot"),
+                   "WHEAT": ("ZW", "CBT", "¢/bu", "cbot"), "MEAL": ("ZM", "CBT", "USD/st", "cbot"),
+                   "SOYOIL": ("ZL", "CBT", "¢/lb", "cbot"), "HO": ("HO", "NYM", "USD/gal", "prev_month_end")}
+AGRI_CURVE_PAIRS = [("SOY", "CORN"), ("WHEAT", "CORN"), ("SOYPROD", "SOY"), ("BOGAL", "HO")]
 
 
 def comex_metal_expiry(y, m):
@@ -699,32 +745,51 @@ def comex_metal_expiry(y, m):
     return _bday_back(_last_bday(y, m) + timedelta(days=1), 3)
 
 
-def build_metal_curve(now):
-    """Contracts for the next 12 delivery months of each metal pair (Yahoo monthly tickers, e.g. GCZ26.CMX, PLF27.NYM).
-    Metals list different months (gold Feb/Apr/Jun/Aug/Oct/Dec, silver Jan/Mar/May/Jul/Sep/Dec, platinum
-    Jan/Apr/Jul/Oct, palladium Mar/Jun/Sep/Dec, copper every month; all of them the nearest few months), so a month
-    is kept if either metal has a price; the page fills the other metal's price for that month by interpolating
-    between its neighbouring contracts."""
+def leg_expiry(rule, y, m):
+    if rule == "metal":
+        return comex_metal_expiry(y, m)
+    if rule == "cbot":                       # CBOT grains and soy products: business day before the 15th
+        return _bday_back(datetime(y, m, 15).date(), 1)
+    return contract_expiry(rule, y, m)
+
+
+def build_curve_set(now, label, out, legs, pairs, source, derived=None):
+    """Contracts for the next 12 delivery months of each pair (Yahoo monthly tickers, e.g. GCZ26.CMX, ZSX26.CBT).
+    Products list different months (gold Feb/Apr/Jun/Aug/Oct/Dec, silver Jan/Mar/May/Jul/Sep/Dec, soybeans
+    Jan/Mar/May/Jul/Aug/Sep/Nov, corn and wheat Mar/May/Jul/Sep/Dec, ...), so a month is kept if either leg has a
+    price; the page fills the other leg's price for that month by interpolating between its neighbouring contracts.
+    derived: key -> (name, unit, [(leg key, multiplier), ...]); a derived leg has a price only when all its parts do."""
     from zoneinfo import ZoneInfo
     today = now.astimezone(ZoneInfo("America/New_York")).date()
     months, y, m = [], today.year, today.month
     for _ in range(CURVE_MONTHS + 4):
-        if comex_metal_expiry(y, m) >= today:
-            months.append((y, m))
+        months.append((y, m))
         y, m = (y, m + 1) if m < 12 else (y + 1, 1)
     cache = {}
 
-    def leg(key, y, m):
-        root, exch, unit = METAL_CURVE_LEGS[key]
+    def base(key, y, m):
+        root, exch, unit, rule = legs[key]
         t = f"{root}{MONTH_CODE[m-1]}{y % 100:02d}.{exch}"
+        exp = leg_expiry(rule, y, m)
         if t not in cache:
-            cache[t] = yahoo_last_settle(t, key, now)
+            cache[t] = (None, None, None, None) if exp < today else yahoo_last_settle(t, key, now)
         price, date, vol, oi = cache[t]
         return {"ticker": t, "px": None if price is None else round(price, 4), "unit": unit,
-                "date": date, "vol": vol, "oi": oi, "expiry": comex_metal_expiry(y, m).strftime("%Y-%m-%d")}
+                "date": date, "vol": vol, "oi": oi, "expiry": exp.strftime("%Y-%m-%d")}
 
-    pairs = []
-    for a, b in METAL_CURVE_PAIRS:
+    def leg(key, y, m):
+        if key not in (derived or {}):
+            return base(key, y, m)
+        name, unit, parts = derived[key]
+        ps = [(base(src, y, m), mult) for src, mult in parts]
+        ok = all(l["px"] is not None for l, _ in ps)
+        return {"ticker": " + ".join(l["ticker"] for l, _ in ps), "unit": unit,
+                "px": round(sum(l["px"] * mult for l, mult in ps), 4) if ok else None,
+                "date": min(l["date"] for l, _ in ps) if ok else None, "vol": None, "oi": None,
+                "expiry": ps[0][0]["expiry"]}
+
+    out_pairs = []
+    for a, b in pairs:
         rows = []
         for (y, m) in months:
             la, lb = leg(a, y, m), leg(b, y, m)
@@ -734,16 +799,25 @@ def build_metal_curve(now):
             if len(rows) == CURVE_MONTHS:
                 break
         both = sum(1 for r in rows if r["a"]["px"] is not None and r["b"]["px"] is not None)
-        print(f"  Metal curve {a}-{b}: {len(rows)} months ({rows[0]['month'] if rows else '-'} to "
+        print(f"  {label} curve {a}-{b}: {len(rows)} months ({rows[0]['month'] if rows else '-'} to "
               f"{rows[-1]['month'] if rows else '-'}), {both} with both prices")
-        pairs.append({"a": a, "b": b, "rows": rows})
-    if not any(p["rows"] for p in pairs):
-        raise RuntimeError("no metal contract prices")
-    data = {"generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "source": "Yahoo Finance monthly contracts (COMEX GC gold, SI silver, HG copper; NYMEX PL platinum, PA palladium)",
-            "pairs": pairs}
-    METAL_CURVE_OUT.write_text(json.dumps(data, separators=(",", ":")))
-    print(f"Metal curve: wrote {METAL_CURVE_OUT.name}")
+        out_pairs.append({"a": a, "b": b, "rows": rows})
+    if not any(p["rows"] for p in out_pairs):
+        raise RuntimeError("no contract prices")
+    data = {"generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "source": source, "pairs": out_pairs}
+    out.write_text(json.dumps(data, separators=(",", ":")))
+    print(f"{label} curve: wrote {out.name}")
+
+
+def build_metal_curve(now):
+    build_curve_set(now, "Metal", METAL_CURVE_OUT, METAL_CURVE_LEGS, METAL_CURVE_PAIRS,
+                    "Yahoo Finance monthly contracts (COMEX GC gold, SI silver, HG copper; NYMEX PL platinum, PA palladium)")
+
+
+def build_agri_curve(now):
+    build_curve_set(now, "Agri", AGRI_CURVE_OUT, AGRI_CURVE_LEGS, AGRI_CURVE_PAIRS,
+                    "Yahoo Finance monthly contracts (CBOT ZS soybeans, ZC corn, ZW wheat, ZM soybean meal, "
+                    "ZL soybean oil; NYMEX HO heating oil)", derived=AGRI_DERIVED)
 
 
 SCHED_INDEX = "15 21 * * *"    # 05:15 SGT
@@ -803,6 +877,13 @@ def main():
             build_metal_curve(now)
         except Exception as e:
             print(f"Metal curve: failed ({e}); previous metal_curve.json kept")
+        print()
+        run_set("Agri", AGRI, AGRI_OUT, start, end, now, min_rows=ENERGY_MIN_ROWS, digits=4, derived=AGRI_DERIVED)
+        print()
+        try:
+            build_agri_curve(now)
+        except Exception as e:
+            print(f"Agri curve: failed ({e}); previous agri_curve.json kept")
 
     if do_idx and len(failed_idx) == len(INDICES):
         print("No index downloaded.")

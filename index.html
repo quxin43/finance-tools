@@ -13,20 +13,20 @@
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
   --paper:#EDF1EC; --sheet:#FBFCFA; --ink:#14251D; --muted:#5A6B62; --line:#CBD6CE;
-  --green:#2F6B4F; --green-soft:#DCE8E0; --red:#A8382A; --red-soft:#F3DEDA; --gold:#B8892B;
+  --green:#2F6B4F; --green-soft:#DCE8E0; --ref-a:#8A4FB0; --ref-b:#2F6FA8; --red:#A8382A; --red-soft:#F3DEDA; --gold:#B8892B;
   --focus:#3E6C8F;
   --c0:#2F6B4F; --c1:#B8892B; --c2:#3E6C8F; --c3:#8E5B8C; --c4:#B9653A; --c5:#6E9A78; --c6:#A44A4A; --c7:#7A7F86;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --paper:#0F1814; --sheet:#16221C; --ink:#E4ECE6; --muted:#97A89E; --line:#2C3D34;
-    --green:#6FBF94; --green-soft:#1E3529; --red:#E38672; --red-soft:#3A2420; --gold:#D9AE55; --focus:#8BB6D9;
+    --green:#6FBF94; --green-soft:#1E3529; --ref-a:#C79BE6; --ref-b:#7DB3E3; --red:#E38672; --red-soft:#3A2420; --gold:#D9AE55; --focus:#8BB6D9;
     --c0:#6FBF94; --c1:#D9AE55; --c2:#7FA9CC; --c3:#C08FBE; --c4:#E0946A; --c5:#9CC7A6; --c6:#D88080; --c7:#A5AAB0;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0F1814; --sheet:#16221C; --ink:#E4ECE6; --muted:#97A89E; --line:#2C3D34;
-  --green:#6FBF94; --green-soft:#1E3529; --red:#E38672; --red-soft:#3A2420; --gold:#D9AE55; --focus:#8BB6D9;
+  --green:#6FBF94; --green-soft:#1E3529; --ref-a:#C79BE6; --ref-b:#7DB3E3; --red:#E38672; --red-soft:#3A2420; --gold:#D9AE55; --focus:#8BB6D9;
   --c0:#6FBF94; --c1:#D9AE55; --c2:#7FA9CC; --c3:#C08FBE; --c4:#E0946A; --c5:#9CC7A6; --c6:#D88080; --c7:#A5AAB0;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -147,6 +147,18 @@ button{font:inherit;cursor:pointer}
 .slide{display:flex;align-items:center;gap:10px;font-size:.88rem;color:var(--muted);flex-wrap:wrap}
 .slide b{color:var(--ink);min-width:5ch}
 .slide input{width:200px;accent-color:var(--green)}
+/* Inv Ratio */
+.inv-totals{grid-template-columns:repeat(7,minmax(0,1fr))}
+.inv-totals b{font-size:1.12rem}
+.inv-sub{display:block;font-size:.76rem;color:var(--muted);margin-top:2px}
+@media (max-width:860px){.inv-totals{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.inv-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.inv-slide{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px 12px;font-size:.88rem;color:var(--muted);margin:4px 0 12px}
+.inv-slide input[type=range]{width:100%;accent-color:var(--green)}
+.inv-slide b{color:var(--ink);font-weight:600}
+.inv-slide .inv-ends{grid-column:2;display:flex;justify-content:space-between;font-size:.76rem}
+.inv-slide button{justify-self:end}
+.inv-formula{font-size:.84rem;color:var(--muted);margin:10px 0 0}
 .table-wrap{overflow-x:auto}
 .lad-table{width:100%;border-collapse:collapse;font-size:.8rem;white-space:nowrap}
 .lad-table th{text-align:right;vertical-align:bottom;font-weight:600;color:var(--muted);padding:6px 5px;border-bottom:1px solid var(--line);white-space:normal;line-height:1.25}
@@ -238,6 +250,7 @@ button{font:inherit;cursor:pointer}
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-view="ladder">Dip ladder</button>
       <button role="tab" aria-selected="false" data-view="short">Rally ladder</button>
+      <button role="tab" aria-selected="false" data-view="inv">Inv Ratio</button>
       <button role="tab" aria-selected="false" data-view="gap">Index gap</button>
       <button role="tab" aria-selected="false" data-view="energy">Energy gap</button>
       <button role="tab" aria-selected="false" data-view="metal">Metal ratio</button>
@@ -353,6 +366,37 @@ button{font:inherit;cursor:pointer}
     <section class="panel">
       <h3>Gain / loss by drop from the top</h3>
       <div class="chart-box"><canvas id="sChart" aria-label="Gain or loss by drop level" role="img"></canvas></div>
+    </section>
+  </main>
+
+  <!-- INV RATIO -->
+  <main id="inv" hidden>
+    <section class="ledger">
+      <h2 class="lad-title">Ratio trade: A against B</h2>
+      <p class="lad-intro">Today the price ratio A/B is <em>p<sub>ri</sub></em>. You expect it to end somewhere between a best case <em>p<sub>rfb</sub></em> and a worst case <em>p<sub>rfw</sub></em>. If p<sub>rfb</sub> is below p<sub>ri</sub> the trade is short A, long B; if it is above, long A, short B. The chart shows your gain for every split of 10,000 between A and B, for several final prices of A (pA′/pA). For each one, B's final price follows from the final ratio: pB′/pB = (pA′/pA) × p<sub>ri</sub> / p<sub>rf</sub>.</p>
+      <div class="lad-inputs">
+        <label><span>Ratio now p<sub>ri</sub> = pA / pB</span><input type="number" id="vRi" value="1.20" min="0.0001" step="0.01"></label>
+        <label><span>Best final ratio p<sub>rfb</sub></span><input type="number" id="vRb" value="1.00" min="0.0001" step="0.01"></label>
+        <label><span>Worst final ratio p<sub>rfw</sub></span><input type="number" id="vRw" value="1.30" min="0.0001" step="0.01"></label>
+        <label><span>pA′/pA from</span><input type="number" id="vX0" value="0.5" min="0.01" step="0.1"></label>
+        <label><span>pA′/pA to</span><input type="number" id="vX1" value="2" min="0.02" step="0.1"></label>
+      </div>
+      <p class="err" id="vErr" role="alert"></p>
+      <div class="totals inv-totals">
+        <div><span>Trade direction</span><b id="vDir"></b></div>
+        <div><span title="All dashed (worst-case) lines cross here: at the worst final ratio the result is the same whatever the price level">Worst-case lines cross at i<sub>A</sub></span><b id="vNw"></b><small id="vNwS" class="inv-sub"></small></div>
+        <div><span>Fixed gain there<br>if ratio ends at worst</span><b id="vNwG"></b></div>
+        <div><span>Same split, if ratio<br>ends at best</span><b id="vNwB"></b><small class="inv-sub">across the pA′/pA range</small></div>
+        <div><span title="All solid (best-case) lines cross here">Best-case lines cross at i<sub>A</sub></span><b id="vNb"></b><small id="vNbS" class="inv-sub"></small></div>
+        <div><span>Fixed gain there<br>if ratio ends at best</span><b id="vNbG"></b></div>
+        <div><span>Same split, if ratio<br>ends at worst</span><b id="vNbW"></b><small class="inv-sub">across the pA′/pA range</small></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Gain % by split between A and B</h3>
+      <div class="chart-box tall"><canvas id="vChart" role="img" aria-label="Gain percent against the split between A and B, for several final prices of A"></canvas></div>
+      <p class="inv-formula">x-axis i<sub>A</sub>: −1 = 10,000 short A; 0 = 10,000 in B; +1 = 10,000 long A. The rest of the 10,000, (1 − |i<sub>A</sub>|) × 10,000, is in B: long B when the trade is short A / long B, short B when it is long A / short B. Solid lines: ratio ends at the best case; dashed: at the worst case. Gain = A position × (pA′/pA − 1) + B position × (pB′/pB − 1), with short positions counted as negative; gain % is on the 10,000 total. Ignores fees, funding, margin and contract sizes.</p>
     </section>
   </main>
 
@@ -641,7 +685,7 @@ button{font:inherit;cursor:pointer}
 const $ = id => document.getElementById(id);
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
-  ["ladder","short","gap","energy","metal","agri"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
+  ["ladder","short","inv","gap","energy","metal","agri"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
 }));
 })();
 </script>
@@ -1690,6 +1734,81 @@ async function run(){
 $("updBtn").addEventListener("click", run);
 $("updGear").addEventListener("click", ()=>{ askToken(); });
 if(getTok()) status("One-click update is set up in this browser.");
+})();
+</script>
+
+<script>
+// Inv Ratio: gain % by split between A and B (x = iA from -1 all short A to +1 all long A), one line per final price of A,
+// solid = ratio ends at the best case p_rfb, dashed = worst case p_rfw
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const KEY = "finmon-inv-v2", TOT = 10000;
+const ids = ["vRi","vRb","vRw","vX0","vX1"];
+try { const sv = JSON.parse(localStorage.getItem(KEY) || "null"); if (sv) ids.forEach(k => { if (sv[k] != null && $(k)) $(k).value = sv[k]; }); } catch(e) {}
+const save = () => { try { const o = {}; ids.forEach(k => o[k] = $(k).value); localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) {} };
+const sp = v => (v > 0.005 ? "+" : v < -0.005 ? "−" : "") + Math.abs(v).toFixed(1) + "%";
+const wTxt = (w, sB) => { const a = Math.round(Math.abs(w) * 100), b = 100 - a; const A = w < 0 ? `short A ${a}%` : w > 0 ? `long A ${a}%` : "no A"; return `${A} · ${sB > 0 ? "long" : "short"} B ${b}%`; };
+const fx = v => (+v).toFixed(2).replace(/0$/, "");
+let chart = null;
+function render(){
+  const ri = +$("vRi").value, rb = +$("vRb").value, rw = +$("vRw").value, x0 = +$("vX0").value, x1 = +$("vX1").value;
+  let err = "";
+  if (!(ri > 0 && rb > 0 && rw > 0)) err = "All three ratios must be above 0.";
+  else if (rb === ri) err = "The best final ratio must differ from the ratio now, or there is no trade.";
+  else if (!(x0 > 0 && x1 > x0)) err = "The pA′/pA range must start above 0 and end above its start.";
+  $("vErr").textContent = err;
+  if (err) { ["vDir","vNb","vNbG","vNw","vNwG","vNwB","vNbS","vNwS","vNbW"].forEach(k => $(k).textContent = "—"); if (chart) { chart.destroy(); chart = null; } return; }
+  save();
+  const sB = rb < ri ? 1 : -1;                 // +1: short A, long B;  -1: long A, short B
+  $("vDir").textContent = sB > 0 ? "Short A, long B" : "Long A, short B";
+  // gain % for split w (iA in -1..1), A price multiple a, final ratio rf
+  const gain = (w, a, rf) => { const b = a * ri / rf; return (w * (a - 1) + sB * (1 - Math.abs(w)) * (b - 1)) * 100; };
+  // price-neutral split on the trade's side (w has sign -sB): slope in a is w + sB(1-|w|)k = 0
+  const neutral = rf => { const k = ri / rf; return -sB * k / (1 + k); };
+  const nb = neutral(rb), nw = neutral(rw);
+  const rng = (w, rf) => { const p = gain(w, x0, rf), q = gain(w, x1, rf); return `${sp(Math.min(p, q))} to ${sp(Math.max(p, q))}`; };
+  const wFmt = w => `${w >= 0 ? "+" : "−"}${Math.abs(w).toFixed(2)}`;
+  const setG = (id, v) => { $(id).textContent = sp(v); $(id).className = v >= 0 ? "pos" : "neg"; };
+  $("vNw").textContent = wFmt(nw); $("vNwS").textContent = wTxt(nw, sB); setG("vNwG", gain(nw, 1, rw)); $("vNwB").textContent = rng(nw, rb);
+  $("vNb").textContent = wFmt(nb); $("vNbS").textContent = wTxt(nb, sB); setG("vNbG", gain(nb, 1, rb)); $("vNbW").textContent = rng(nb, rw);
+  // lines: 5 final prices of A across the range (geometric spacing, includes 1 when in range)
+  let as = [0, 1, 2, 3, 4].map(i => x0 * Math.pow(x1 / x0, i / 4));
+  if (x0 < 1 && x1 > 1) { as = [x0, Math.sqrt(x0), 1, Math.sqrt(x1), x1]; }
+  const pal = ["#B8892B", "#C2410C", cssVar("--ink"), "#2F6FA8", "#8A4FB0"];
+  const muted = cssVar("--muted"), line = cssVar("--line"), ink = cssVar("--ink");
+  const W = d3w();
+  function d3w(){ const r = []; for (let i = 0; i <= 200; i++) r.push(-1 + 2 * i / 200); return r; }
+  const ds = [];
+  as.forEach((a, j) => {
+    ds.push({ label: `pA′/pA ${fx(a)}`, data: W.map(w => ({x: w, y: gain(w, a, rb)})), parsing: false, pointRadius: 0, borderWidth: 2.2, borderColor: pal[j], tension: 0, _a: a, _case: "best" });
+    ds.push({ label: `pA′/pA ${fx(a)} (worst)`, data: W.map(w => ({x: w, y: gain(w, a, rw)})), parsing: false, pointRadius: 0, borderWidth: 1.5, borderDash: [6, 4], borderColor: pal[j], tension: 0, _a: a, _case: "worst" });
+  });
+  const vline = (x, col, lbl) => ({ label: lbl, data: [{x, y: -1e9}, {x, y: 1e9}], parsing: false, pointRadius: 0, borderWidth: 1.2, borderColor: col, borderDash: [2, 3], _ref: true });
+  const ys = ds.flatMap(d => d.data.map(p => p.y)); const ymin = Math.floor((Math.min(...ys) - 2) / 10) * 10, ymax = Math.ceil((Math.max(...ys) + 2) / 10) * 10, pad = 0;
+  ds.push(vline(nb, cssVar("--green"), "price-neutral split, best case"), vline(nw, cssVar("--red"), "price-neutral split, worst case"));
+  ds.push({ label: "crossing points", data: [{x: nw, y: gain(nw, 1, rw)}, {x: nb, y: gain(nb, 1, rb)}], parsing: false, showLine: false, pointRadius: 6, pointBorderWidth: 2, pointBackgroundColor: cssVar("--sheet"), pointBorderColor: [cssVar("--red"), cssVar("--green")], borderColor: ink, _ref: true });
+  ds.push({ label: "solid = ratio ends at best case", data: [], borderColor: muted, borderWidth: 2.2, _key: true },
+          { label: "dashed = worst case", data: [], borderColor: muted, borderWidth: 1.5, borderDash: [6, 4], _key: true });
+  const opts = { responsive: true, maintainAspectRatio: false, animation: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+    scales: {
+      x: { type: "linear", min: -1, max: 1, title: {display: true, text: "iA   (−1 = all short A · 0 = all in B · +1 = all long A)", color: muted},
+           ticks: {color: muted, stepSize: 0.25, callback: v => (v > 0 ? "+" : "") + (+v).toFixed(2)}, grid: {color: c => c.tick.value === 0 ? ink : line} },
+      y: { min: ymin - pad, max: ymax + pad, title: {display: true, text: "Gain (% of 10,000)", color: muted}, ticks: {color: muted, callback: v => Math.round(v) + "%"}, grid: {color: c => c.tick.value === 0 ? ink : line, lineWidth: c => c.tick.value === 0 ? 1.5 : 1} } },
+    plugins: {
+      legend: { position: "bottom", labels: {color: muted, boxWidth: 24, boxHeight: 2, filter: it => { const d = ds[it.datasetIndex]; return d._ref || d._key || d._case === "best"; }}, onClick: () => {} },
+      tooltip: { filter: it => !ds[it.datasetIndex]._ref && !ds[it.datasetIndex]._key, itemSort: (p, q) => q.parsed.y - p.parsed.y, callbacks: {
+        title: items => `iA ${wFmt(items[0].parsed.x)}  ·  ${wTxt(items[0].parsed.x, sB)}`,
+        label: it => { const d = ds[it.datasetIndex]; return `A ×${fx(d._a)}, B ×${fx(d._a * ri / (d._case === "best" ? rb : rw))} (${d._case}): ${sp(it.parsed.y)}`; } } } } };
+  if (window.Chart) {
+    if (chart) { chart.data.datasets = ds; chart.options = opts; chart.update(); }
+    else chart = new Chart($("vChart"), {type: "line", data: {datasets: ds}, options: opts});
+  }
+}
+ids.forEach(k => $(k).addEventListener("input", render));
+document.querySelectorAll('.tabs button[data-view="inv"]').forEach(b => b.addEventListener("click", () => { if (chart) { chart.destroy(); chart = null; } requestAnimationFrame(render); }));
+if (window.Chart) render(); else window.addEventListener("load", render);
 })();
 </script>
 </body>

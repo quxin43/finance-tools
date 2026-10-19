@@ -1,6 +1,6 @@
 # Finance tools with daily index data
 
-Four tabs: **Dip ladder**, **Rally ladder**, **Index gap** and **Energy gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
+Seven tabs: **Dip ladder**, **Rally ladder**, **Inv Ratio**, **Index gap**, **Energy gap**, **Metal ratio** and **Agri gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
 
 ## Peaks and bottoms panel (Index gap tab)
 
@@ -39,6 +39,12 @@ Saved in `data/energy.json`. UK gasoil comes from [OilPriceAPI](https://www.oilp
 ## Futures curve tables (Energy gap tab)
 
 Under each energy chart, a table shows the next 12 contract months traded by both legs, with each month's latest settlement in USD/bbl, the gap and the ratio. Brent, WTI, heating oil and gasoline come from Yahoo's monthly NYMEX tickers (for example `HOX26.NYM` = heating oil, November 2026; month codes F G H J K M N Q U V X Z = Jan to Dec); UK gasoil comes from the OilPriceAPI data the run already downloads. The months are worked out on every run from each exchange's expiry rule, so when the nearest contract expires it drops off and a new month is added at the end. The table also shows each contract's volume (contracts traded on the settlement day) and open interest (contracts still open); open interest comes from Yahoo's quote details and is not available for gasoil. Saved in `data/curve.json` (only the latest curve; no history). The gap charts themselves still use the continuous tickers (BZ=F, CL=F, HO=F, RB=F).
+
+## Inv Ratio tab
+
+A calculator for a two-leg ratio trade, with no market data. Enter the price ratio now, p_ri = pA / pB, a best-case final ratio p_rfb, a worst-case final ratio p_rfw, and a range for A's final price pA'/pA (default 0.5 to 2). If p_rfb is below p_ri the trade is short A / long B; if above, long A / short B. For each final price of A, B's final price follows from the final ratio: pB'/pB = (pA'/pA) × p_ri / p_rf.
+
+The chart plots gain (% of 10,000) against the split iA, from −1 (10,000 short A) through 0 (10,000 in B) to +1 (10,000 long A); the rest, (1 − |iA|) × 10,000, is in B on the side the trade direction sets. Five colours are five final prices of A; solid lines are the best-case ratio, dashed the worst. All dashed lines cross at one split: there the worst-case result is fixed whatever the price level, and the summary shows that split, the fixed result, and the best-case range for the same split (and the same for the best-case crossing). Inputs are kept in the browser (localStorage key finmon-inv-v2). Ignores fees, funding, margin and contract sizes.
 
 ## Metal ratio tab
 

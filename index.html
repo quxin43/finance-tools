@@ -1870,6 +1870,10 @@ if (window.Chart) render(); else window.addEventListener("load", render);
 (function(){
 "use strict";
 const $ = id => document.getElementById(id);
+const LW = 76, RW = 66, RMIN = 30;   // fixed axis widths so all four charts share the same plot area
+const fitW = w => ({ afterFit: sc => { sc.width = w; } });
+const dummyR = w => ({ position:"right", display:true, grid:{drawOnChartArea:false, drawTicks:false}, border:{display:false}, ticks:{display:false}, ...fitW(w) });
+let rightW = RMIN;
 const LK = "finmon-iratio-v1", PINK = "#D4537E", BBC = "#5B6FB5", SIG = "#B8892B", RS = "#3E6C8F", CA = "#B8892B", CB = "#3E6C8F";
 let D = null, dates = [], ts = [], keys = [], chart = null, macdChart = null, rsiChart = null, kdjChart = null;
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -1986,9 +1990,11 @@ function render(){
     ds.push({ label:`${nameOf(B)} (points)`, data:pB, parsing:false, yAxisID:"y3", borderColor:CB, borderWidth:1.3, pointRadius:0, borderDash:[3,3], fill:false });
   }
   const opts=baseOpts(s0, muted, line, ink);
-  opts.scales.y={ position:"left", title:{display:true,text:`Ratio (${A} ÷ ${B})`,color:muted}, ticks:{color:muted,callback:v=>(+v).toFixed(dp)}, grid:{color:line} };
-  opts.scales.y2={ display:showP, position:"right", title:{display:true,text:`${A} (points)`,color:CA}, ticks:{color:CA,callback:v=>(+v).toLocaleString("en-US")}, grid:{drawOnChartArea:false} };
-  opts.scales.y3={ display:showP, position:"right", title:{display:true,text:`${B} (points)`,color:CB}, ticks:{color:CB,callback:v=>(+v).toLocaleString("en-US")}, grid:{drawOnChartArea:false} };
+  opts.scales.y={ position:"left", title:{display:true,text:`Ratio (${A} ÷ ${B})`,color:muted}, ticks:{color:muted,callback:v=>(+v).toFixed(dp)}, grid:{color:line}, ...fitW(LW) };
+  rightW = showP ? 2*RW : RMIN;
+  opts.scales.y2={ display:showP, position:"right", title:{display:true,text:`${A} (points)`,color:CA}, ticks:{color:CA,callback:v=>(+v).toLocaleString("en-US")}, grid:{drawOnChartArea:false}, ...fitW(showP?RW:0) };
+  opts.scales.y3={ display:showP, position:"right", title:{display:true,text:`${B} (points)`,color:CB}, ticks:{color:CB,callback:v=>(+v).toLocaleString("en-US")}, grid:{drawOnChartArea:false}, ...fitW(showP?RW:0) };
+  if(!showP) opts.scales.yR=dummyR(RMIN);
   opts.plugins.legend={ display:true, onClick:(e,item,leg)=>{ const ch=leg.chart, lab=item.text, vis=!ch.isDatasetVisible(item.datasetIndex); ch.data.datasets.forEach((d,k)=>{ if(d.label===lab) ch.setDatasetVisibility(k,vis); }); ch.update("none"); },
     labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex} };
   opts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate,
@@ -2027,20 +2033,23 @@ function renderInd(A, B, s0, g, f, dp){
   const ref=(y,lab,col,dash)=>({ label:lab, data:[{x:ts[a0],y},{x:ts[L],y}], parsing:false, borderColor:col, borderWidth:1.1, borderDash:dash, pointRadius:0, fill:false, isRef:true });
   const lg={display:true, labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex}};
   const mOpts=baseOpts(a0, muted, line, ink);
-  mOpts.scales.y={ title:{display:true,text:"MACD",color:muted}, ticks:{color:muted,maxTicksLimit:5,callback:v=>(+v).toFixed(mdp)}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.2:1} };
+  mOpts.scales.y={ title:{display:true,text:"MACD",color:muted}, ticks:{color:muted,maxTicksLimit:5,callback:v=>(+v).toFixed(mdp)}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.2:1}, ...fitW(LW) };
+  mOpts.scales.yR=dummyR(rightW);
   mOpts.plugins.legend=lg; mOpts.plugins.tooltip={ callbacks:{ title:tipDate, label:it=>`${it.dataset.label}: ${f2(it.parsed.y)}` } };
   const mDs=[ { label:"Histogram (MACD − signal)", data:pts(hist), parsing:false, borderWidth:0, pointRadius:0, tension:0, borderColor:green,
       segment:{ borderColor:c=>(c.p0.parsed.y+c.p1.parsed.y)/2>=0?green:red }, fill:{target:"origin", above:green+"55", below:red+"55"} },
     { label:"MACD (12, 26)", data:pts(macd), parsing:false, borderColor:ink, borderWidth:1.5, pointRadius:0, tension:0, fill:false },
     { label:"Signal (9)", data:pts(sig), parsing:false, borderColor:SIG, borderWidth:1.4, pointRadius:0, tension:0, fill:false } ];
   const rOpts=baseOpts(a0, muted, line, ink);
-  rOpts.scales.y={ min:0, max:100, title:{display:true,text:"RSI (14)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,30,50,70,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line} };
+  rOpts.scales.y={ min:0, max:100, title:{display:true,text:"RSI (14)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,30,50,70,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line}, ...fitW(LW) };
+  rOpts.scales.yR=dummyR(rightW);
   rOpts.plugins.legend=lg; rOpts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate, label:it=>`RSI: ${it.parsed.y.toFixed(1)}` } };
   const rDs=[ { label:"RSI (14) of A ÷ B", data:pts(rsi), parsing:false, borderColor:RS, borderWidth:1.6, pointRadius:0, tension:0, fill:false },
     ref(70,"70 / 30",red,[6,4]), ref(30,"70 / 30",green,[6,4]), ref(50,"50",muted,[2,3]) ];
   const kOpts=baseOpts(a0, muted, line, ink);
   let jLo=0, jHi=100; for(let i=a0;i<=L;i++){ if(J[i]!=null){ if(J[i]<jLo) jLo=J[i]; if(J[i]>jHi) jHi=J[i]; } }
-  kOpts.scales.y={ min:Math.floor(Math.min(-10,jLo)/10)*10, max:Math.ceil(Math.max(110,jHi)/10)*10, title:{display:true,text:"KDJ (9, 3, 3)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,20,50,80,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line} };
+  kOpts.scales.y={ min:Math.floor(Math.min(-10,jLo)/10)*10, max:Math.ceil(Math.max(110,jHi)/10)*10, title:{display:true,text:"KDJ (9, 3, 3)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,20,50,80,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line}, ...fitW(LW) };
+  kOpts.scales.yR=dummyR(rightW);
   kOpts.plugins.legend=lg; kOpts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate, label:it=>`${it.dataset.label}: ${it.parsed.y.toFixed(1)}` } };
   const kDs=[ { label:"K", data:pts(K), parsing:false, borderColor:ink, borderWidth:1.5, pointRadius:0, tension:0, fill:false },
     { label:"D", data:pts(Dd), parsing:false, borderColor:SIG, borderWidth:1.4, pointRadius:0, tension:0, fill:false },

@@ -1,6 +1,6 @@
 # Finance tools with daily index data
 
-Seven tabs: **Dip ladder**, **Rally ladder**, **Inv Ratio**, **Index gap**, **Energy gap**, **Metal ratio** and **Agri gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
+Eight tabs: **Dip ladder**, **Rally ladder**, **Inv Ratio**, **Index gap**, **Index ratio**, **Energy gap**, **Metal ratio** and **Agri gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
 
 ## Peaks and bottoms panel (Index gap tab)
 
@@ -23,6 +23,10 @@ For one index (default US500): a **peak** is a close higher than the *n* trading
 | US100 | US NDAQ 100 (Nasdaq-100) | ^NDX |
 | US500 | US SPX 500 (S&P 500) | ^GSPC |
 | US2000 | US Small Cap 2000 (Russell 2000) | ^RUT |
+
+## Index ratio tab
+
+Uses the same daily index closes as the Index gap tab (data/indices.json), so it needs no extra download. Pick a start date (or a quick range) and two indices; the ratio is index A points ÷ index B points on each day. The summary shows both latest closes, the ratio on the last date, its average, highest, lowest and standard deviation (σ) over the range, and how many σ the latest ratio is from the average (pink beyond 2σ, red beyond 3σ), as on the Energy gap tab. The chart can also show both indices (one price axis each) and Bollinger Bands (20 days, ±2σ); below it, MACD (12, 26, 9), RSI (14) and KDJ (9, 3, 3) of the ratio, computed over the pair's whole common history so the start date doesn't change them. Settings are kept in the browser (localStorage key finmon-iratio-v1).
 
 ## Energy futures (Energy gap tab)
 

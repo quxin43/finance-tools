@@ -252,6 +252,7 @@ button{font:inherit;cursor:pointer}
       <button role="tab" aria-selected="false" data-view="short">Rally ladder</button>
       <button role="tab" aria-selected="false" data-view="inv">Inv Ratio</button>
       <button role="tab" aria-selected="false" data-view="gap">Index gap</button>
+      <button role="tab" aria-selected="false" data-view="iratio">Index ratio</button>
       <button role="tab" aria-selected="false" data-view="energy">Energy gap</button>
       <button role="tab" aria-selected="false" data-view="metal">Metal ratio</button>
       <button role="tab" aria-selected="false" data-view="agri">Agri gap</button>
@@ -577,6 +578,58 @@ button{font:inherit;cursor:pointer}
     </section>
   </main>
 
+  <!-- INDEX RATIO -->
+  <main id="iratio" hidden>
+    <section class="ledger">
+      <h2 class="lad-title">Index ratio analysis</h2>
+      <p class="upd-note" id="rUpd"></p>
+      <p class="lad-intro">Pick a start date and two indices. The ratio is <em>index A points ÷ index B points</em> on each day. The ratio line is black; days more than 2σ from the period average are marked with pink points, and more than 3σ with red points.</p>
+      <div class="lad-inputs lad-first">
+        <label><span>Start date</span><input type="date" id="rStart"></label>
+        <label><span>Quick range</span><select id="rQuick"><option value="">Custom</option><option value="1m">1 month</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="ytd">Year to date</option><option value="1y">1 year</option><option value="3y">3 years</option><option value="5y">5 years</option><option value="10y">10 years</option><option value="20y">20 years</option><option value="all">All (A and B)</option></select></label>
+      </div>
+      <div class="lad-inputs">
+        <label><span>Index A</span><select id="rA"></select></label>
+        <label><span>Index B</span><select id="rB"></select></label>
+      </div>
+      <p class="err" id="rErr" role="alert"></p>
+      <div class="totals lad-totals e-totals">
+        <div><span id="rLA">Index A</span><b id="rVA">—</b></div>
+        <div><span id="rLB">Index B</span><b id="rVB">—</b></div>
+        <div><span>Ratio<br>(last date)</span><b id="rVG">—</b></div>
+        <div><span>Average ratio</span><b id="rVAv">—</b></div>
+        <div><span>Highest ratio</span><b id="rVHi">—</b></div>
+        <div><span>Lowest ratio</span><b id="rVLo">—</b></div>
+        <div><span>Std dev (σ)<br>of ratio</span><b id="rVSd">—</b></div>
+        <div><span>Latest ratio<br>vs average</span><b id="rVZ">—</b></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 id="rTitle">Index ratio by date</h3>
+      <div class="ind-toggles">
+        <span class="grp-lbl">On the chart:</span>
+        <label class="chk"><input type="checkbox" id="rShowAB" checked> Index A and B</label>
+        <label class="chk"><input type="checkbox" id="rShowBB"> Bollinger Bands</label>
+        <span class="grp-lbl sep">Below:</span>
+        <label class="chk"><input type="checkbox" id="rShowMACD" checked> MACD</label>
+        <label class="chk"><input type="checkbox" id="rShowRSI" checked> RSI</label>
+        <label class="chk"><input type="checkbox" id="rShowKDJ" checked> KDJ</label>
+      </div>
+      <div class="chart-box tall"><canvas id="rChart" role="img" aria-label="Index A divided by index B by date"></canvas></div>
+      <div id="rInd">
+        <p class="ind-note" id="rBbNote"></p>
+        <div id="rMacdW"><div class="chart-box ind"><canvas id="rMacd" role="img" aria-label="MACD of the ratio A divided by B"></canvas></div>
+        <p class="ind-note" id="rMacdNote"></p></div>
+        <div id="rRsiW"><div class="chart-box ind"><canvas id="rRsi" role="img" aria-label="RSI of the ratio A divided by B"></canvas></div>
+        <p class="ind-note" id="rRsiNote"></p></div>
+        <div id="rKdjW"><div class="chart-box ind kdj"><canvas id="rKdj" role="img" aria-label="KDJ of the ratio A divided by B"></canvas></div>
+        <p class="ind-note" id="rKdjNote"></p></div>
+      </div>
+      <p class="hint lad-note" id="rSrc">Loading data…</p>
+    </section>
+  </main>
+
   <!-- ENERGY GAP -->
   <main id="energy" hidden>
     <section class="ledger">
@@ -685,7 +738,7 @@ button{font:inherit;cursor:pointer}
 const $ = id => document.getElementById(id);
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
-  ["ladder","short","inv","gap","energy","metal","agri"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
+  ["ladder","short","inv","gap","iratio","energy","metal","agri"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
 }));
 })();
 </script>
@@ -1809,6 +1862,208 @@ function render(){
 ids.forEach(k => $(k).addEventListener("input", render));
 document.querySelectorAll('.tabs button[data-view="inv"]').forEach(b => b.addEventListener("click", () => { if (chart) { chart.destroy(); chart = null; } requestAnimationFrame(render); }));
 if (window.Chart) render(); else window.addEventListener("load", render);
+})();
+</script>
+
+<script>
+// Index ratio: index A points ÷ index B points, with the energy-tab summary (average, σ bands) and the index-gap indicators
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const LK = "finmon-iratio-v1", PINK = "#D4537E", BBC = "#5B6FB5", SIG = "#B8892B", RS = "#3E6C8F", CA = "#B8892B", CB = "#3E6C8F";
+let D = null, dates = [], ts = [], keys = [], chart = null, macdChart = null, rsiChart = null, kdjChart = null;
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtD = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
+const iso = t => t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+const nameOf = k => (D.meta[k]&&D.meta[k].name)||k;
+const sgTime = v => new Date(v).toLocaleString("en-US",{timeZone:"Asia/Singapore",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}) + " SGT";
+const LIVE_TAG = '<span class="live-tag" title="Live price: the market was still trading when the data was updated">live</span>';
+const isLive = k => !!(D.meta[k] && D.meta[k].live);
+const pts2 = v => v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const tipDate = it => new Date(it[0].parsed.x).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric",timeZone:"UTC"});
+
+async function load(){
+  try{ const r = await fetch("data/indices.json", {cache:"no-store"}); if(!r.ok) throw new Error(r.status); D = await r.json(); }
+  catch(e){ $("rSrc").textContent = "Couldn't load the index data (data/indices.json)."; return; }
+  dates = D.dates; ts = dates.map(d=>Date.parse(d+"T00:00:00Z")); keys = Object.keys(D.series);
+  $("rUpd").innerHTML = `Data last updated by GitHub: <b>${sgTime(D.generated)}</b>` + (keys.some(isLive) ? ` · ${LIVE_TAG} = still trading at that time` : "");
+  keys.forEach(k=>["rA","rB"].forEach(id=>{ const o=document.createElement("option"); o.value=k; o.textContent=nameOf(k); $(id).appendChild(o); }));
+  $("rA").value = keys.includes("US500") ? "US500" : keys[0]; $("rB").value = keys.includes("UK100") ? "UK100" : keys[1];
+  $("rQuick").value = "3y";
+  try{ const o=JSON.parse(localStorage.getItem(LK)||"null"); if(o){
+    if(keys.includes(o.A)) $("rA").value=o.A; if(keys.includes(o.B)) $("rB").value=o.B;
+    if(o.start) $("rStart").value=o.start; if(o.quick!==undefined) $("rQuick").value=o.quick;
+    ["AB","BB","MACD","RSI","KDJ"].forEach(k=>{ if(o["i"+k]!==undefined) $("rShow"+k).checked=!!o["i"+k]; }); } }catch(e){}
+  render();
+}
+function save(){ try{ const o={A:$("rA").value,B:$("rB").value,start:$("rStart").value,quick:$("rQuick").value}; ["AB","BB","MACD","RSI","KDJ"].forEach(k=>o["i"+k]=$("rShow"+k).checked); localStorage.setItem(LK, JSON.stringify(o)); }catch(e){} }
+function firstIdx(k){ const v=D.series[k]; for(let i=0;i<v.length;i++) if(v[i]!=null) return i; return -1; }
+function pairStart(){ const a=firstIdx($("rA").value), b=firstIdx($("rB").value); return Math.max(a<0?0:a, b<0?0:b); }
+function applyQuick(minIdx){
+  const q=$("rQuick").value; if(!q) return;
+  if(q==="all"){ $("rStart").value=dates[pairStart()]; return; }
+  const last=new Date(dates[dates.length-1]+"T00:00:00"); let t=new Date(last);
+  if(q==="ytd") t=new Date(last.getFullYear(),0,1);
+  else { const n=parseInt(q,10); if(q.endsWith("m")) t.setMonth(t.getMonth()-n); else t.setFullYear(t.getFullYear()-n); }
+  const want=iso(t); $("rStart").value = want<dates[minIdx] ? dates[minIdx] : (dates.find(d=>d>=want)||dates[minIdx]);
+}
+// ratio over the whole common history of A and B (null before their first common date)
+function fullRatio(A, B){
+  const va=D.series[A], vb=D.series[B], n=dates.length, r=new Array(n).fill(null); let f=-1;
+  for(let i=0;i<n;i++){ if(va[i]!=null && vb[i]!=null && vb[i]>0){ r[i]=va[i]/vb[i]; if(f<0) f=i; } }
+  // carry the previous value over any later hole so indicators stay continuous
+  if(f>=0) for(let i=f+1;i<n;i++) if(r[i]==null) r[i]=r[i-1];
+  return {f: f<0 ? n : f, r};
+}
+function baseOpts(s0, muted, line, ink){
+  const long=(ts[ts.length-1]-ts[s0])>3*365*864e5;
+  return { responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"nearest",axis:"x",intersect:false},
+    scales:{ x:{ type:"linear", min:ts[s0], max:ts[ts.length-1],
+      afterBuildTicks: long ? (ax=>{ const t=[]; const y0=new Date(ax.min).getUTCFullYear(), y1=new Date(ax.max).getUTCFullYear(); const step=Math.max(1,Math.ceil((y1-y0+1)/10)); for(let y=y0;y<=y1;y+=step){ const v=Date.UTC(y,0,1); if(v>=ax.min&&v<=ax.max) t.push({value:v}); } if(t.length>=2) ax.ticks=t; }) : undefined,
+      ticks:{color:muted, maxTicksLimit:8, callback:v=>new Date(v).toLocaleDateString("en-US", long?{year:"numeric",timeZone:"UTC"}:{month:"short",year:"2-digit",timeZone:"UTC"})}, grid:{color:line} } },
+    plugins:{ decimation:{enabled:true, algorithm:"lttb", samples:900} } };
+}
+function emaArr(x, from, p){ const k=2/(p+1), out=new Array(x.length).fill(null); let e=x[from]; out[from]=e; for(let i=from+1;i<x.length;i++){ e=x[i]*k+e*(1-k); out[i]=e; } return out; }
+
+function render(){
+  if(!D) return;
+  const firsts=keys.map(firstIdx).filter(i=>i>=0), minIdx=Math.min(...firsts);
+  $("rStart").min=dates[minIdx]; $("rStart").max=dates[dates.length-1];
+  applyQuick(minIdx);
+  let st=$("rStart").value; if(!st||st<dates[minIdx]){ st=dates[pairStart()]; $("rStart").value=st; }
+  if(st>dates[dates.length-1]){ st=dates[dates.length-1]; $("rStart").value=st; }
+  const sIdx=Math.max(minIdx, dates.findIndex(d=>d>=st));
+  save();
+  const A=$("rA").value, B=$("rB").value, va=D.series[A], vb=D.series[B];
+  $("rErr").textContent = A===B ? "Index A and B are the same, so the ratio is always 1. Pick two different indices." : "";
+  const {f, r} = fullRatio(A, B), L=dates.length-1;
+  let s0=Math.max(sIdx, f);
+  if(s0>L){ $("rErr").textContent="These two indices have no dates in common."; return; }
+  if(s0>sIdx && A!==B) $("rErr").textContent=`${va[sIdx]==null?A:B} has no data on the start date, so this pair starts on ${fmtD(dates[s0])}.`;
+  // summary over the selected range
+  let sum=0, n=0, hi=-Infinity, lo=Infinity, iHi=s0, iLo=s0;
+  for(let i=s0;i<=L;i++){ const v=r[i]; sum+=v; n++; if(v>hi){hi=v;iHi=i;} if(v<lo){lo=v;iLo=i;} }
+  const avg=sum/n; let q=0; for(let i=s0;i<=L;i++) q+=(r[i]-avg)**2; const sd=Math.sqrt(q/n);
+  const dp=Math.min(6, Math.max(2, 3-Math.floor(Math.log10(Math.abs(avg)||1)))), fr=v=>v.toFixed(dp);
+  const zOf=v=> sd>0 ? (v-avg)/sd : 0, band=z=>{ const a=Math.abs(z); return a>3?"red":a>2?"pink":"in"; };
+  const bc=v=>{ const b=band(zOf(v)); return b==="red"?"neg":b==="pink"?"pinkv":""; };
+  $("rLA").innerHTML=nameOf(A)+(isLive(A)?LIVE_TAG:""); $("rLB").innerHTML=nameOf(B)+(isLive(B)?LIVE_TAG:"");
+  $("rVA").textContent=pts2(va[L]); $("rVB").textContent=pts2(vb[L]);
+  const last=r[L], zL=zOf(last);
+  $("rVG").textContent=fr(last); $("rVG").className=bc(last);
+  $("rVAv").textContent=fr(avg); $("rVHi").textContent=fr(hi); $("rVHi").className=bc(hi); $("rVHi").title=fmtD(dates[iHi]);
+  $("rVLo").textContent=fr(lo); $("rVLo").className=bc(lo); $("rVLo").title=fmtD(dates[iLo]);
+  $("rVSd").textContent=sd.toFixed(dp);
+  $("rVZ").textContent=(zL>0.005?"+":zL<-0.005?"−":"")+Math.abs(zL).toFixed(2)+"σ"; $("rVZ").className=bc(last);
+  $("rTitle").textContent=`${A} ÷ ${B}, ${fmtD(dates[s0])} to ${fmtD(dates[L])}`;
+  const mA=D.meta[A]||{}, mB=D.meta[B]||{}, upd=new Date(D.generated).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  $("rSrc").textContent = `Daily closes from Yahoo Finance (${mA.ticker||A}, ${mB.ticker||B}), updated ${upd}. Latest close: ${A} ${fmtD(mA.last||dates[L])}${mA.live?" (live price)":""}, ${B} ${fmtD(mB.last||dates[L])}${mB.live?" (live price)":""}. ${n} days in range. Weekdays with no close (holidays) carry the previous close forward. The ratio has no unit: it is how many points of ${B} one point of ${A} is worth.${n<20?" Only a few days in range; the average, σ and bands become meaningful after a few weeks.":""}`;
+
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
+  const colOf=z=>{ const b=band(z); return b==="red"?red:b==="pink"?PINK:ink; };
+  const pR=[], pA=[], pB=[]; for(let i=s0;i<=L;i++){ pR.push({x:ts[i],y:r[i]}); pA.push({x:ts[i],y:va[i]}); pB.push({x:ts[i],y:vb[i]}); }
+  const x0=ts[s0], x1=ts[L], hl=(y,label,color,dash,w)=>({ label, data:[{x:x0,y},{x:x1,y}], parsing:false, yAxisID:"y", borderColor:color, borderWidth:w, borderDash:dash, pointRadius:0, fill:false, isRef:true });
+  const ds=[{ label:`Ratio ${A} ÷ ${B}`, data:pR, parsing:false, yAxisID:"y", borderWidth:2, tension:0, borderColor:ink, fill:false,
+      pointRadius:c=>{ const v=c.raw&&c.raw.y; return v==null?0:band(zOf(v))==="in"?0:2.6; }, pointHoverRadius:4,
+      pointBackgroundColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderColor:c=>colOf(zOf(c.raw?c.raw.y:0)), pointBorderWidth:0 },
+    hl(avg,"Average ratio",muted,[],1), hl(avg+2*sd,"±2σ",PINK,[6,4],1.2), hl(avg-2*sd,"±2σ",PINK,[6,4],1.2), hl(avg+3*sd,"±3σ",red,[3,3],1.2), hl(avg-3*sd,"±3σ",red,[3,3],1.2)];
+  const showBB=$("rShowBB").checked && A!==B, showP=$("rShowAB").checked;
+  let bbNote="";
+  if(showBB && L-f>=20){
+    const P=20, mid=new Array(dates.length).fill(null), up=mid.slice(), lw=mid.slice();
+    for(let i=f+P-1;i<=L;i++){ let s=0, qq=0; for(let j=i-P+1;j<=i;j++){ s+=r[j]; qq+=r[j]*r[j]; } const m=s/P, d=Math.sqrt(Math.max(0,qq/P-m*m)); mid[i]=m; up[i]=m+2*d; lw[i]=m-2*d; }
+    const bd=arr=>{ const o=[]; for(let i=s0;i<=L;i++) o.push({x:ts[i],y:arr[i]}); return o; };
+    ds.push({ label:"Bollinger (20 days, ±2σ)", data:bd(up), parsing:false, yAxisID:"y", borderColor:BBC, borderWidth:1, pointRadius:0, tension:0, fill:false });
+    ds.push({ label:"Bollinger (20 days, ±2σ)", data:bd(lw), parsing:false, yAxisID:"y", borderColor:BBC, borderWidth:1, pointRadius:0, tension:0, backgroundColor:BBC+"18", fill:"-1" });
+    ds.push({ label:"20-day average", data:bd(mid), parsing:false, yAxisID:"y", borderColor:BBC, borderWidth:1, borderDash:[4,3], pointRadius:0, tension:0, fill:false });
+    const pb = up[L]>lw[L] ? (r[L]-lw[L])/(up[L]-lw[L]) : null;
+    if(pb!=null) bbNote=`Bollinger Bands (blue, on the ratio chart): 20-day average ± 2σ of the ratio. On ${fmtD(dates[L])} the ratio is at %B = ${pb.toFixed(2)}`
+      + (pb>1?" (above the upper band: stretched high versus the last 20 days)":pb<0?" (below the lower band: stretched low versus the last 20 days)":" (inside the bands; 0 = lower band, 1 = upper band)") + `; band width ${(up[L]-lw[L]).toFixed(dp)}.`;
+  }
+  $("rBbNote").textContent=bbNote;
+  if(showP){
+    ds.push({ label:`${nameOf(A)} (points)`, data:pA, parsing:false, yAxisID:"y2", borderColor:CA, borderWidth:1.3, pointRadius:0, borderDash:[7,4], fill:false });
+    ds.push({ label:`${nameOf(B)} (points)`, data:pB, parsing:false, yAxisID:"y3", borderColor:CB, borderWidth:1.3, pointRadius:0, borderDash:[3,3], fill:false });
+  }
+  const opts=baseOpts(s0, muted, line, ink);
+  opts.scales.y={ position:"left", title:{display:true,text:`Ratio (${A} ÷ ${B})`,color:muted}, ticks:{color:muted,callback:v=>(+v).toFixed(dp)}, grid:{color:line} };
+  opts.scales.y2={ display:showP, position:"right", title:{display:true,text:`${A} (points)`,color:CA}, ticks:{color:CA,callback:v=>(+v).toLocaleString("en-US")}, grid:{drawOnChartArea:false} };
+  opts.scales.y3={ display:showP, position:"right", title:{display:true,text:`${B} (points)`,color:CB}, ticks:{color:CB,callback:v=>(+v).toLocaleString("en-US")}, grid:{drawOnChartArea:false} };
+  opts.plugins.legend={ display:true, onClick:(e,item,leg)=>{ const ch=leg.chart, lab=item.text, vis=!ch.isDatasetVisible(item.datasetIndex); ch.data.datasets.forEach((d,k)=>{ if(d.label===lab) ch.setDatasetVisibility(k,vis); }); ch.update("none"); },
+    labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex} };
+  opts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate,
+    label:it=>`${it.dataset.label}: ${it.dataset.yAxisID==="y" ? fr(it.parsed.y)+(it.datasetIndex===0?`  (${(zOf(it.parsed.y)>=0?"+":"−")+Math.abs(zOf(it.parsed.y)).toFixed(2)}σ)`:"") : pts2(it.parsed.y)}` } };
+  if(!window.Chart) return;
+  if(chart){ chart.data.datasets=ds; chart.options=opts; chart.update(); } else chart=new Chart($("rChart"),{type:"line",data:{datasets:ds},options:opts});
+  renderInd(A, B, s0, r, f, dp);
+}
+
+// MACD (12, 26, 9), RSI (14, Wilder) and KDJ (9, 3, 3) of the ratio, computed over the pair's whole common history
+function renderInd(A, B, s0, g, f, dp){
+  const onM=$("rShowMACD").checked, onR=$("rShowRSI").checked, onK=$("rShowKDJ").checked, onB=$("rShowBB").checked;
+  $("rMacdW").hidden=!onM; $("rRsiW").hidden=!onR; $("rKdjW").hidden=!onK; $("rBbNote").hidden=!onB;
+  if(!onM && macdChart){ macdChart.destroy(); macdChart=null; }
+  if(!onR && rsiChart){ rsiChart.destroy(); rsiChart=null; }
+  if(!onK && kdjChart){ kdjChart.destroy(); kdjChart=null; }
+  $("rInd").hidden = A===B || !(onM||onR||onK||onB);
+  const n=dates.length;
+  if(A===B || !(onM||onR||onK) || f>=n-2) return;
+  const e12=emaArr(g,f,12), e26=emaArr(g,f,26);
+  const macd=g.map((_,i)=> i<f ? null : e12[i]-e26[i]);
+  const sig=emaArr(macd.map((v,i)=> i<f ? 0 : v), f, 9).map((v,i)=> i<f ? null : v);
+  const hist=macd.map((v,i)=> v==null||sig[i]==null ? null : v-sig[i]);
+  const rsi=new Array(n).fill(null), P=14;
+  if(n-f>P){ let up=0, dn=0;
+    for(let i=f+1;i<=f+P;i++){ const d=g[i]-g[i-1]; if(d>0) up+=d; else dn-=d; }
+    up/=P; dn/=P; rsi[f+P] = dn===0 ? 100 : 100-100/(1+up/dn);
+    for(let i=f+P+1;i<n;i++){ const d=g[i]-g[i-1]; up=(up*(P-1)+Math.max(d,0))/P; dn=(dn*(P-1)+Math.max(-d,0))/P; rsi[i] = dn===0 ? 100 : 100-100/(1+up/dn); } }
+  const K=new Array(n).fill(null), Dd=K.slice(), J=K.slice();
+  { let k=50, d=50; for(let i=f+8;i<n;i++){ let hi=-Infinity, lo=Infinity; for(let j=i-8;j<=i;j++){ if(g[j]>hi) hi=g[j]; if(g[j]<lo) lo=g[j]; }
+      const rsv = hi>lo ? (g[i]-lo)/(hi-lo)*100 : 50; k=(2*k+rsv)/3; d=(2*d+k)/3; K[i]=k; Dd[i]=d; J[i]=3*k-2*d; } }
+  const a0=Math.max(s0,f), L=n-1;
+  const green=cssVar("--green"), red=cssVar("--red"), ink=cssVar("--ink"), muted=cssVar("--muted"), line=cssVar("--line");
+  const pts=arr=>{ const o=[]; for(let i=a0;i<=L;i++) o.push({x:ts[i],y:arr[i]}); return o; };
+  const mdp=dp+1, f2=v=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(mdp);
+  const ref=(y,lab,col,dash)=>({ label:lab, data:[{x:ts[a0],y},{x:ts[L],y}], parsing:false, borderColor:col, borderWidth:1.1, borderDash:dash, pointRadius:0, fill:false, isRef:true });
+  const lg={display:true, labels:{color:muted, boxWidth:18, filter:(it,data)=>data.datasets.findIndex(d=>d.label===it.text)===it.datasetIndex}};
+  const mOpts=baseOpts(a0, muted, line, ink);
+  mOpts.scales.y={ title:{display:true,text:"MACD",color:muted}, ticks:{color:muted,maxTicksLimit:5,callback:v=>(+v).toFixed(mdp)}, grid:{color:c=>c.tick.value===0?ink:line, lineWidth:c=>c.tick.value===0?1.2:1} };
+  mOpts.plugins.legend=lg; mOpts.plugins.tooltip={ callbacks:{ title:tipDate, label:it=>`${it.dataset.label}: ${f2(it.parsed.y)}` } };
+  const mDs=[ { label:"Histogram (MACD − signal)", data:pts(hist), parsing:false, borderWidth:0, pointRadius:0, tension:0, borderColor:green,
+      segment:{ borderColor:c=>(c.p0.parsed.y+c.p1.parsed.y)/2>=0?green:red }, fill:{target:"origin", above:green+"55", below:red+"55"} },
+    { label:"MACD (12, 26)", data:pts(macd), parsing:false, borderColor:ink, borderWidth:1.5, pointRadius:0, tension:0, fill:false },
+    { label:"Signal (9)", data:pts(sig), parsing:false, borderColor:SIG, borderWidth:1.4, pointRadius:0, tension:0, fill:false } ];
+  const rOpts=baseOpts(a0, muted, line, ink);
+  rOpts.scales.y={ min:0, max:100, title:{display:true,text:"RSI (14)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,30,50,70,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line} };
+  rOpts.plugins.legend=lg; rOpts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate, label:it=>`RSI: ${it.parsed.y.toFixed(1)}` } };
+  const rDs=[ { label:"RSI (14) of A ÷ B", data:pts(rsi), parsing:false, borderColor:RS, borderWidth:1.6, pointRadius:0, tension:0, fill:false },
+    ref(70,"70 / 30",red,[6,4]), ref(30,"70 / 30",green,[6,4]), ref(50,"50",muted,[2,3]) ];
+  const kOpts=baseOpts(a0, muted, line, ink);
+  let jLo=0, jHi=100; for(let i=a0;i<=L;i++){ if(J[i]!=null){ if(J[i]<jLo) jLo=J[i]; if(J[i]>jHi) jHi=J[i]; } }
+  kOpts.scales.y={ min:Math.floor(Math.min(-10,jLo)/10)*10, max:Math.ceil(Math.max(110,jHi)/10)*10, title:{display:true,text:"KDJ (9, 3, 3)",color:muted}, afterBuildTicks:ax=>{ ax.ticks=[0,20,50,80,100].map(v=>({value:v})); }, ticks:{color:muted,autoSkip:false}, grid:{color:line} };
+  kOpts.plugins.legend=lg; kOpts.plugins.tooltip={ filter:it=>!it.dataset.isRef, callbacks:{ title:tipDate, label:it=>`${it.dataset.label}: ${it.parsed.y.toFixed(1)}` } };
+  const kDs=[ { label:"K", data:pts(K), parsing:false, borderColor:ink, borderWidth:1.5, pointRadius:0, tension:0, fill:false },
+    { label:"D", data:pts(Dd), parsing:false, borderColor:SIG, borderWidth:1.4, pointRadius:0, tension:0, fill:false },
+    { label:"J", data:pts(J), parsing:false, borderColor:RS+"99", borderWidth:1, pointRadius:0, tension:0, fill:false },
+    ref(80,"80 / 20",red,[6,4]), ref(20,"80 / 20",green,[6,4]) ];
+  const warm = a0 < f+35 ? " The first weeks after the pair's first common date are a warm-up and less reliable." : "";
+  const mv=macd[L], sv=sig[L], hv=hist[L], rv=rsi[L], kv=K[L], dv=Dd[L], jv=J[L];
+  $("rMacdNote").textContent = mv==null ? "" : `MACD of the ratio on ${fmtD(dates[L])}: MACD ${f2(mv)}, signal ${f2(sv)}, histogram ${f2(hv)} (MACD ${hv>=0?"above":"below"} its signal line). MACD = 12-day EMA − 26-day EMA of the ratio A ÷ B; signal = 9-day EMA of MACD.${warm}`;
+  $("rRsiNote").textContent = rv==null ? "" : `RSI of the ratio on ${fmtD(dates[L])}: ${rv.toFixed(1)}${rv>=70?" (above 70: the ratio has risen strongly lately)":rv<=30?" (below 30: the ratio has fallen strongly lately)":""}. RSI (14, Wilder smoothing) of the daily changes in A ÷ B; above 70 and below 30 are the usual overbought / oversold levels.`;
+  $("rKdjNote").textContent = kv==null ? "" : `KDJ of the ratio on ${fmtD(dates[L])}: K ${kv.toFixed(1)}, D ${dv.toFixed(1)}, J ${jv.toFixed(1)} (K ${kv>=dv?"above":"below"} D)`
+    + (kv>=80&&dv>=80?"; in the overbought zone above 80":kv<=20&&dv<=20?"; in the oversold zone below 20":"")
+    + `. RSV = where the ratio sits in its 9-day high–low range (0–100); K and D are 1/3 smoothings; J = 3K − 2D can go outside 0–100. K crossing D near 80 or 20 is the usual turn signal.`;
+  if(!window.Chart) return;
+  if(onK){ if(kdjChart){ kdjChart.data.datasets=kDs; kdjChart.options=kOpts; kdjChart.update(); } else kdjChart=new Chart($("rKdj"),{type:"line",data:{datasets:kDs},options:kOpts}); }
+  if(onM){ if(macdChart){ macdChart.data.datasets=mDs; macdChart.options=mOpts; macdChart.update(); } else macdChart=new Chart($("rMacd"),{type:"line",data:{datasets:mDs},options:mOpts}); }
+  if(onR){ if(rsiChart){ rsiChart.data.datasets=rDs; rsiChart.options=rOpts; rsiChart.update(); } else rsiChart=new Chart($("rRsi"),{type:"line",data:{datasets:rDs},options:rOpts}); }
+}
+const killAll=()=>{ [chart,macdChart,rsiChart,kdjChart].forEach(c=>c&&c.destroy()); chart=macdChart=rsiChart=kdjChart=null; };
+["rA","rB","rQuick","rShowAB","rShowBB","rShowMACD","rShowRSI","rShowKDJ"].forEach(id=>$(id).addEventListener("change",render));
+$("rStart").addEventListener("change",()=>{ $("rQuick").value=""; render(); });
+document.querySelectorAll('.tabs button[data-view="iratio"]').forEach(b=>b.addEventListener("click",()=>{ killAll(); requestAnimationFrame(render); }));
+const mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",()=>{ killAll(); render(); });
+load();
 })();
 </script>
 </body>

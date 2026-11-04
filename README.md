@@ -1,6 +1,6 @@
 # Finance tools with daily index data
 
-Nine tabs: **Dip ladder**, **Rally ladder**, **Inv Ratio**, **Index gap**, **Index ratio**, **S&P history**, **Energy gap**, **Metal ratio** and **Agri gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
+Ten tabs: **Dip ladder**, **Rally ladder**, **Inv Ratio**, **Index gap**, **Index ratio**, **S&P history**, **Nasdaq history**, **Energy gap**, **Metal ratio** and **Agri gap**. A GitHub workflow downloads daily closes for 13 indices from Yahoo Finance every day at **05:15 Singapore time** (energy futures at 05:15 or 06:15 depending on US daylight saving) and republishes the site, so the Index gap tab is always current.
 
 ## Peaks and bottoms panel (Index gap tab)
 
@@ -28,16 +28,16 @@ For one index (default US500): a **peak** is a close higher than the *n* trading
 
 Uses the same daily index closes as the Index gap tab (data/indices.json), so it needs no extra download. Pick a start date (or a quick range) and two indices; the ratio is index A points ÷ index B points on each day. The summary shows both latest closes, the ratio on the last date, its average, highest, lowest and standard deviation (σ) over the range, and how many σ the latest ratio is from the average (pink beyond 2σ, red beyond 3σ), as on the Energy gap tab. The chart can also show both indices (one price axis each) and Bollinger Bands (20 days, ±2σ); below it, MACD (12, 26, 9), RSI (14) and KDJ (9, 3, 3) of the ratio, computed over the pair's whole common history so the start date doesn't change them. Settings are kept in the browser (localStorage key finmon-iratio-v1).
 
-## S&P history tab
+## S&P history and Nasdaq history tabs
 
-The S&P 500 (US500, ^GSPC) since 1927 on a log scale, rebuilt in the browser from data/indices.json every time the page loads, so it follows the daily workflow with no extra download. Days whose close equals the previous close (holidays carried forward) are dropped before the analysis.
+The S&P 500 (US500, ^GSPC) since 1927, and the Nasdaq-100 (US100, ^NDX) since 1985, each on a log scale, rebuilt in the browser from data/indices.json every time the page loads, so it follows the daily workflow with no extra download. Days whose close equals the previous close (holidays carried forward) are dropped before the analysis.
 
 - Peaks and bottoms: a peak is an all-time-high close; its bottom is the lowest close before that peak is regained; every fall of 9% or more is marked and shaded (labels for falls of 15% or more and the latest one).
-- Trend lines: the hindsight log-linear trend fitted on all closes, and from 1990 the real-time trend (fitted each day only on closes up to that day).
+- Trend lines: the hindsight log-linear trend fitted on all closes, and the real-time trend (from 1990 for the S&P 500, from 1995 for the Nasdaq-100, so each starts with at least 10 years of data) (fitted each day only on closes up to that day).
 - Panels below the price: distance from the hindsight trend (and from the real-time trend since 1990), the buy-and-hold annual gain from each day to the last close (days at least 1 year back) and over the next 3 years (days at least 3 years back). Price only, no dividends.
-- Scatter charts: distance from trend on the start day against the next 3- and 10-year annual gain, with the median per band, for the hindsight trend (all years) and the real-time trend (since 1990).
+- Scatter charts: distance from trend on the start day against the next 3- and 10-year annual gain, with the median per band, for the hindsight trend (all years) and the real-time trend.
 
-Uses the d3 chart library (loaded from cdnjs) for this tab only.
+Both tabs share one template and use the d3 chart library (loaded from cdnjs).
 
 ## Energy futures (Energy gap tab)
 
@@ -116,6 +116,8 @@ The button at the top right starts the GitHub update straight away, waits for it
 2. Name it (for example "finance-tools update"), pick an expiry, and under **Repository access** choose **Only select repositories → finance-tools**.
 3. Under **Permissions → Repository permissions**, set **Actions** to **Read and write** (Metadata read-only is added automatically). Nothing else.
 4. Generate, copy the token, then on the site click **⚙** next to the button and paste it.
+
+The ⚙ and **Update data now** buttons are hidden from visitors: they only appear in a browser that has your token saved. To save the token on a new device or browser, open the site with **#admin** at the end of the address (https://quxin43.github.io/finance-tools/#admin), click ⚙ and paste it; after that the buttons show on that browser every time. Even if someone else opened #admin, they couldn't start an update: GitHub only accepts the request with a token that has write access to this repository.
 
 The token is kept only in that browser (localStorage) and sent only to api.github.com. It can do nothing except start and read workflow runs of this repository. Use ⚙ and leave it empty to remove it. Without a token, the button opens the Actions page, where you can click **Run workflow** yourself.
 

@@ -241,49 +241,49 @@ button{font:inherit;cursor:pointer}
   .form,.calc .fields{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
-/* S&P 500 history tab (scoped) */
-#spx{--bg:var(--paper); --panel:var(--sheet); --fg:var(--ink); --grid:var(--line); --rule:var(--line); --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace; --mid:#1b2230; --price:#2f5d8c; --trend:#c2410c; --peak:#15803d; --bottom:#b91c1c; --shade:rgba(185,28,28,.08); --now:#7c3aed; --e1:#c026d3; --e2:#2f5d8c; --e3:#d97706; --rt:#e0a800; --g3:#d97706; --above:rgba(47,93,140,.35); --below:rgba(194,65,12,.35)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #spx{--mid:#f1f3f7; --price:#7fb0e0; --trend:#f08a5d; --peak:#4ade80; --bottom:#f87171; --shade:rgba(248,113,113,.07); --now:#b794f6; --e1:#e879f9; --e2:#7fb0e0; --e3:#fbbf24; --rt:#facc15; --g3:#fbbf24; --above:rgba(127,176,224,.35); --below:rgba(240,138,93,.35)}}
-:root[data-theme="dark"] #spx{--mid:#f1f3f7; --price:#7fb0e0; --trend:#f08a5d; --peak:#4ade80; --bottom:#f87171; --shade:rgba(248,113,113,.07); --now:#b794f6; --e1:#e879f9; --e2:#7fb0e0; --e3:#fbbf24; --rt:#facc15; --g3:#fbbf24; --above:rgba(127,176,224,.35); --below:rgba(240,138,93,.35)}
-#spx .spx-card{position:relative}
-#spx .stats{margin-top:12px}
-#spx .spx-bar{margin-top:12px}
-#spx .sub{color:var(--muted);margin:4px 0 0;max-width:90ch;font-size:.85rem}
-#spx .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-#spx .stat{background:var(--panel);border:1px solid var(--grid);border-radius:6px;padding:10px 12px;min-width:0}
-#spx .stat .k{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-#spx .stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
-#spx .stat .n{font-size:.75rem;color:var(--muted)}
-#spx .spx-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
-#spx .seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
-#spx .seg button{font:600 .8rem var(--sans);background:transparent;color:var(--fg);border:0;padding:6px 11px;cursor:pointer}
-#spx .seg button+button{border-left:1px solid var(--rule)}
-#spx .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
-#spx button:focus-visible,#spx input:focus-visible{outline:2px solid var(--price);outline-offset:2px}
-#spx label.tg{display:inline-flex;gap:6px;align-items:center;font-size:.82rem;cursor:pointer}
-#spx .sw{display:inline-block;width:16px;height:3px;border-radius:2px}
-#spx .card{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:8px 4px 4px;position:relative;min-width:0}
-#spx .chartbox{overflow-x:auto}
-#spx svg{display:block;font-family:var(--sans)}
-#spx .ax text{fill:var(--muted);font-size:11px;font-family:var(--mono)}
-#spx .ax path,#spx .ax line{stroke:var(--rule)}
-#spx .gridl line{stroke:var(--grid)}
-#spx .gridl path{display:none}
-#spx .lbl{font-size:10.5px;font-family:var(--sans)}
-#spx .halo{paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
-#spx .tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:8px 10px;font-size:.78rem;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px}
-#spx .tip[hidden]{display:none!important}
-#spx .tip b{font-family:var(--mono)}
-#spx .tip .r{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
-#spx .tip .r span:last-child{font-family:var(--mono)}
-#spx .notes{color:var(--muted);font-size:.8rem;max-width:100ch;display:grid;gap:4px}
-#spx .notes p{margin:0}
-#spx .corr{padding:14px 14px 10px;display:grid;gap:8px}
-#spx .corr h2{font-size:1.05rem;margin:0}
-#spx .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:12px}
-#spx .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:var(--muted)}
-#spx .legend span{display:inline-flex;align-items:center;gap:6px}
-#spx .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+/* Index history tabs (S&P history, Nasdaq history), scoped */
+.histtab{--bg:var(--paper); --panel:var(--sheet); --fg:var(--ink); --grid:var(--line); --rule:var(--line); --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace; --mid:#1b2230; --price:#2f5d8c; --trend:#c2410c; --peak:#15803d; --bottom:#b91c1c; --shade:rgba(185,28,28,.08); --now:#7c3aed; --e1:#c026d3; --e2:#2f5d8c; --e3:#d97706; --rt:#e0a800; --g3:#d97706; --above:rgba(47,93,140,.35); --below:rgba(194,65,12,.35)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .histtab{--mid:#f1f3f7; --price:#7fb0e0; --trend:#f08a5d; --peak:#4ade80; --bottom:#f87171; --shade:rgba(248,113,113,.07); --now:#b794f6; --e1:#e879f9; --e2:#7fb0e0; --e3:#fbbf24; --rt:#facc15; --g3:#fbbf24; --above:rgba(127,176,224,.35); --below:rgba(240,138,93,.35)}}
+:root[data-theme="dark"] .histtab{--mid:#f1f3f7; --price:#7fb0e0; --trend:#f08a5d; --peak:#4ade80; --bottom:#f87171; --shade:rgba(248,113,113,.07); --now:#b794f6; --e1:#e879f9; --e2:#7fb0e0; --e3:#fbbf24; --rt:#facc15; --g3:#fbbf24; --above:rgba(127,176,224,.35); --below:rgba(240,138,93,.35)}
+.histtab .spx-card{position:relative}
+.histtab .stats{margin-top:12px}
+.histtab .spx-bar{margin-top:12px}
+.histtab .sub{color:var(--muted);margin:4px 0 0;max-width:90ch;font-size:.85rem}
+.histtab .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.histtab .stat{background:var(--panel);border:1px solid var(--grid);border-radius:6px;padding:10px 12px;min-width:0}
+.histtab .stat .k{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.histtab .stat .v{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.histtab .stat .n{font-size:.75rem;color:var(--muted)}
+.histtab .spx-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.histtab .seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.histtab .seg button{font:600 .8rem var(--sans);background:transparent;color:var(--fg);border:0;padding:6px 11px;cursor:pointer}
+.histtab .seg button+button{border-left:1px solid var(--rule)}
+.histtab .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.histtab button:focus-visible,.histtab input:focus-visible{outline:2px solid var(--price);outline-offset:2px}
+.histtab label.tg{display:inline-flex;gap:6px;align-items:center;font-size:.82rem;cursor:pointer}
+.histtab .sw{display:inline-block;width:16px;height:3px;border-radius:2px}
+.histtab .card{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:8px 4px 4px;position:relative;min-width:0}
+.histtab .chartbox{overflow-x:auto}
+.histtab svg{display:block;font-family:var(--sans)}
+.histtab .ax text{fill:var(--muted);font-size:11px;font-family:var(--mono)}
+.histtab .ax path,.histtab .ax line{stroke:var(--rule)}
+.histtab .gridl line{stroke:var(--grid)}
+.histtab .gridl path{display:none}
+.histtab .lbl{font-size:10.5px;font-family:var(--sans)}
+.histtab .halo{paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
+.histtab .tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:8px 10px;font-size:.78rem;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px}
+.histtab .tip[hidden]{display:none!important}
+.histtab .tip b{font-family:var(--mono)}
+.histtab .tip .r{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.histtab .tip .r span:last-child{font-family:var(--mono)}
+.histtab .notes{color:var(--muted);font-size:.8rem;max-width:100ch;display:grid;gap:4px}
+.histtab .notes p{margin:0}
+.histtab .corr{padding:14px 14px 10px;display:grid;gap:8px}
+.histtab .corr h2{font-size:1.05rem;margin:0}
+.histtab .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:12px}
+.histtab .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:var(--muted)}
+.histtab .legend span{display:inline-flex;align-items:center;gap:6px}
+.histtab .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
 </style>
 </head>
 <body>
@@ -297,11 +297,12 @@ button{font:inherit;cursor:pointer}
       <button role="tab" aria-selected="false" data-view="gap">Index gap</button>
       <button role="tab" aria-selected="false" data-view="iratio">Index ratio</button>
       <button role="tab" aria-selected="false" data-view="spx">S&amp;P history</button>
+      <button role="tab" aria-selected="false" data-view="ndx">Nasdaq history</button>
       <button role="tab" aria-selected="false" data-view="energy">Energy gap</button>
       <button role="tab" aria-selected="false" data-view="metal">Metal ratio</button>
       <button role="tab" aria-selected="false" data-view="agri">Agri gap</button>
     </div>
-    <div class="right upd-box">
+    <div class="right upd-box" id="updBox" hidden>
       <div class="upd-row">
         <button class="ghost" id="updBtn" type="button" title="Run the GitHub data update now instead of waiting for the next scheduled run">Update data now</button>
         <button class="ghost" id="updGear" type="button" title="Set or remove the GitHub token used for one-click updates" aria-label="Update settings">⚙</button>
@@ -674,11 +675,11 @@ button{font:inherit;cursor:pointer}
     </section>
   </main>
 
-  <!-- S&P 500 HISTORY -->
-  <main id="spx" hidden>
+  <!-- S&AMP;P 500 HISTORY -->
+  <main id="spx" class="histtab" hidden>
 
   <section class="ledger">
-    <h2 class="lad-title" id="x-title">S&amp;P 500 history: every fall of 9% or more, and what buy-and-hold earned</h2>
+    <h2 class="lad-title">S&amp;P 500 history: every fall of 9% or more, and what buy-and-hold earned</h2>
     <p class="sub" id="x-sub"></p>
   
   <section class="stats" id="x-stats" aria-label="Key figures"></section>
@@ -722,6 +723,56 @@ button{font:inherit;cursor:pointer}
   </section>
 
     <p class="hint lad-note" id="x-load">Loading data…</p>
+  </main>
+
+  <!-- NASDAQ-100 HISTORY -->
+  <main id="ndx" class="histtab" hidden>
+
+  <section class="ledger">
+    <h2 class="lad-title">Nasdaq-100 history: every fall of 9% or more, and what buy-and-hold earned</h2>
+    <p class="sub" id="n-sub"></p>
+  
+  <section class="stats" id="n-stats" aria-label="Key figures"></section>
+  <div class="spx-bar">
+    <div class="seg" role="group" aria-label="Date range" id="n-range">
+      <button id="n-r-all" data-from="1985" aria-pressed="true">All</button>
+      <button id="n-r-1950" data-from="1995" aria-pressed="false">1995–</button>
+      <button id="n-r-1990" data-from="2005" aria-pressed="false">2005–</button>
+      <button id="n-r-2010" data-from="2015" aria-pressed="false">2015–</button>
+    </div>
+    <label class="tg"><input type="checkbox" id="n-t-trend" checked><span class="sw" style="background:var(--trend)"></span>Hindsight trend (fitted on all data)</label>
+    <label class="tg"><input type="checkbox" id="n-t-rt" checked><span class="sw" style="background:var(--rt);height:4px"></span>Real-time trend from 1995 (fitted on data up to each day)</label>
+  </div>
+  </section>
+  <section class="panel spx-card">
+    <div class="chartbox" id="n-box"><svg id="n-chart" role="img" aria-label="S&amp;P 500 daily close on a log scale with peaks and bottoms, a buy-and-hold annual gain panel below, and the deviation from trend"></svg></div>
+    <div class="tip" id="n-tip" hidden></div>
+  </section>
+  <section class="panel corr" aria-labelledby="n-corr-h">
+    <h2 id="n-corr-h">Distance from trend vs. the gain that followed</h2>
+    <p class="sub">Each dot is one start day (every 5th trading day shown). Left to right: how far the index was above or below the long-run trend that day. Up and down: the buy-and-hold annual gain over the following 3 or 10 years. The black steps are the median gain in each band; the dashed line marks today.</p>
+    <div class="legend" id="n-legend"></div>
+    <div class="sgrid">
+      <div class="chartbox"><svg id="n-sc3" role="img" aria-label="Scatter of distance from trend against the next 3-year annual gain"></svg></div>
+      <div class="chartbox"><svg id="n-sc10" role="img" aria-label="Scatter of distance from trend against the next 10-year annual gain"></svg></div>
+    </div>
+  </section>
+  <section class="panel corr" aria-labelledby="n-rt-h">
+    <h2 id="n-rt-h">Without hindsight: real-time distance from trend vs. the gain that followed, since 1995</h2>
+    <p class="sub">Uses the yellow line in the price chart: for each day from 1995, the long-run trend is fitted on all closes from 1985 up to that day, and the distance from trend is measured against that day's trend value. This is what an investor could actually have measured at the time.</p>
+    <div class="legend" id="n-legend2"></div>
+    <div class="sgrid">
+      <div class="chartbox"><svg id="n-rsc3" role="img" aria-label="Scatter of real-time distance from trend against the next 3-year gain, 1990 onwards"></svg></div>
+      <div class="chartbox"><svg id="n-rsc10" role="img" aria-label="Scatter of real-time distance from trend against the next 10-year gain, 1990 onwards"></svg></div>
+    </div>
+  </section>
+  <section class="panel notes">
+    <p><b>Peak</b> (▼): an all-time-high close followed by a fall of 9% or more. <b>Bottom</b> (▲): the lowest close before the old peak is regained. Red bands run from each peak to its bottom. Labels show falls of 15% or more, plus the latest one.</p>
+    <p><b>Gain panels, annual gain if you bought on that day and held:</b> the purple panel runs from that day to the last close; the amber panel covers the next 3 years. The dashed line is the median for the date range shown. Both are price only, without dividends, so the real return was higher, by roughly 0.5–1% a year (Nasdaq-100 dividends are small).</p>
+    <p><span id="n-src">Data: Yahoo Finance ^NDX daily closes (data/indices.json), updated by the daily workflow.</span></p>
+  </section>
+
+    <p class="hint lad-note" id="n-load">Loading data…</p>
   </main>
 
   <!-- ENERGY GAP -->
@@ -832,7 +883,7 @@ button{font:inherit;cursor:pointer}
 const $ = id => document.getElementById(id);
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
-  ["ladder","short","inv","gap","iratio","spx","energy","metal","agri"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
+  ["ladder","short","inv","gap","iratio","spx","ndx","energy","metal","agri"].forEach(v=>{ $(v).hidden = b.dataset.view!==v; });
 }));
 })();
 </script>
@@ -1850,7 +1901,7 @@ function askToken(){
 async function run(){
   if(busy) return;
   if(!getTok()){
-    if(confirm("One-click update needs a GitHub token (saved only in this browser).\n\nOK = enter a token now\nCancel = open the GitHub Actions page and click 'Run workflow' there")){ if(!askToken()) return; }
+    if(confirm("One-click update needs a GitHub token (saved only in this browser).\n\nOK = enter a token now\nCancel = open the GitHub Actions page and click 'Run workflow' there")){ if(!askToken()) return; showBox(); }
     else { window.open(ACTIONS_PAGE, "_blank", "noopener"); status("Opened GitHub Actions: click 'Run workflow', then reload this page in about 3 minutes."); return; }
   }
   busy = true; $("updBtn").disabled = true;
@@ -1878,8 +1929,14 @@ async function run(){
   }catch(e){ status(e.message, true); }
   finally{ busy = false; $("updBtn").disabled = false; }
 }
+// Only the owner sees the buttons: they show when this browser has a saved token, or when the page is opened
+// with #admin at the end of the address (to save a token on a new device). Visitors see neither button.
+// (Even if someone finds them, the update can't run without a token that has write access to the repository.)
+const showBox = () => { $("updBox").hidden = !(getTok() || location.hash === "#admin"); };
 $("updBtn").addEventListener("click", run);
-$("updGear").addEventListener("click", ()=>{ askToken(); });
+$("updGear").addEventListener("click", ()=>{ askToken(); showBox(); });
+window.addEventListener("hashchange", showBox);
+showBox();
 if(getTok()) status("One-click update is set up in this browser.");
 })();
 </script>
@@ -2172,21 +2229,19 @@ load();
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
-// S&P 500 history tab: the analysis from the "S&P 500 Peaks, Bottoms & Gains" page, recomputed from data/indices.json on every load
+// Index history tab (peaks/bottoms, trends, buy-and-hold gains, correlations), recomputed from data/indices.json on every load
 (function(){
 "use strict";
-const VIS = () => !document.getElementById("spx").hidden;
+const CFG = {"view": "spx", "key": "US500", "p": "x-", "tick": "^GSPC"};
+const VIS = () => !document.getElementById(CFG.view).hidden;
 function build(J){
-  // US500 closes; drop days whose close equals the previous one (holidays carried forward)
-  const ds = J.dates, v = J.series.US500, day = [], c = [];
-  const DAY = 864e5, d0 = Date.parse(ds[0] + "T00:00:00Z") / DAY;
-  let prev = null;
-  for (let i = 0; i < ds.length; i++) { const x = v[i]; if (x == null || x === prev) continue; prev = x; day.push(Date.parse(ds[i] + "T00:00:00Z") / DAY - d0); c.push(x); }
+  // closes of one index; drop days whose close equals the previous one (holidays carried forward)
+  const ds = J.dates, v = J.series[CFG.key], day = [], c = [];
+  const DAY = 864e5; let d0 = null, prev = null;
+  for (let i = 0; i < ds.length; i++) { const x = v[i]; if (x == null || x === prev) continue; prev = x; const dd = Date.parse(ds[i] + "T00:00:00Z") / DAY; if (d0 == null) d0 = dd; day.push(dd - d0); c.push(x); }
   const N = c.length, t = day.map(d => d / 365.25), L = c.map(Math.log);
-  // hindsight log-linear trend over all days
   let st = 0, sy = 0, stt = 0, sty = 0; for (let i = 0; i < N; i++) { st += t[i]; sy += L[i]; stt += t[i] * t[i]; sty += t[i] * L[i]; }
   const b = (N * sty - st * sy) / (N * stt - st * st), a = (sy - b * st) / N;
-  // buy-and-hold annual gain: to the last close (start days at least 1 year ago) and over the next 3 years
   const end = day[N - 1], now = new Array(N).fill(null), g3 = new Array(N).fill(null);
   let j = 0;
   for (let i = 0; i < N; i++) {
@@ -2195,20 +2250,17 @@ function build(J){
     const tgt = day[i] + Math.round(3 * 365.25);
     if (day[i] + 1096 <= end) { if (j < i) j = i; while (j + 1 < N && day[j + 1] <= tgt) j++; const y = (day[j] - day[i]) / 365.25; g3[i] = Math.round((Math.pow(c[j] / c[i], 1 / y) - 1) * 10000) / 100; }
   }
-  // peaks and bottoms: a peak is an all-time-high close; its bottom is the lowest close before the peak is regained; keep falls of 9% or more
+  // a peak is an all-time-high close; its bottom is the lowest close before the peak is regained; keep falls of 9% or more
   const iso = k => new Date((d0 + day[k]) * DAY).toISOString().slice(0, 10), ep = [];
   let pk = 0, lo = 0;
   const push = () => { const drop = (c[lo] / c[pk] - 1) * 100; if (drop <= -9) ep.push({ pd: iso(pk), p: c[pk], bd: iso(lo), b: c[lo], drop: Math.round(drop * 10) / 10 }); };
-  for (let i = 1; i < N; i++) {
-    if (c[i] >= c[pk]) { if (lo !== pk) push(); pk = i; lo = i; }
-    else if (c[i] < c[lo]) lo = i;
-  }
-  if (lo !== pk) push();   // a fall still in progress
-  return { d0, day, c, trend: { a, b }, now, g3, ep, meta: J.meta.US500 || {}, generated: J.generated };
+  for (let i = 1; i < N; i++) { if (c[i] >= c[pk]) { if (lo !== pk) push(); pk = i; lo = i; } else if (c[i] < c[lo]) lo = i; }
+  if (lo !== pk) push();
+  return { d0, day, c, trend: { a, b }, now, g3, ep, meta: J.meta[CFG.key] || {}, generated: J.generated };
 }
 function start(D){
-  const VIS = () => !document.getElementById("spx").hidden;
   const Y0 = new Date(D.d0 * 864e5).getUTCFullYear(), LY = new Date((D.d0 + D.day[D.day.length - 1]) * 864e5).getUTCFullYear();
+  let st2;
   const DAY = 864e5, N = D.day.length;
   const T = D.day.map(x => new Date((D.d0 + x) * DAY));
   const C = D.c, NOW = D.now, G3 = D.g3;
@@ -2267,9 +2319,9 @@ function start(D){
     const dv = dev.slice(i0);
     const y2 = d3.scaleLinear().domain([Math.min(-60, d3.min(dv)), Math.max(60, d3.max(dv))]).nice().range([H2, 0]);
   
-    svg.append("defs").append("clipPath").attr("id", "xclip").append("rect").attr("width", iw).attr("height", H1);
-    svg.select("defs").append("clipPath").attr("id", "xclip2").append("rect").attr("width", iw).attr("height", H2);
-    svg.select("defs").append("clipPath").attr("id", "xclipG").append("rect").attr("width", iw).attr("height", HG);
+    svg.append("defs").append("clipPath").attr("id", "x-clip").append("rect").attr("width", iw).attr("height", H1);
+    svg.select("defs").append("clipPath").attr("id", "x-clip2").append("rect").attr("width", iw).attr("height", H2);
+    svg.select("defs").append("clipPath").attr("id", "x-clipG").append("rect").attr("width", iw).attr("height", HG);
     const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
     const gA = svg.append("g").attr("transform", `translate(${m.l},${oA})`), gB = svg.append("g").attr("transform", `translate(${m.l},${oB})`);
     const g2 = svg.append("g").attr("transform", `translate(${m.l},${o2})`);
@@ -2278,7 +2330,7 @@ function start(D){
     const lt = []; for (let k = -1; k < 6; k++) for (const s of [1, 2, 5]) { const v = s * 10 ** k; if (v >= lo && v <= hi) lt.push(v); }
     g.append("g").attr("class", "gridl").call(d3.axisLeft(yL).tickValues(lt).tickSize(-iw).tickFormat(""));
     // episode shading
-    for (const [gg, hh, cp] of [[g, H1, "clip"], [gA, HG, "clipG"], [gB, HG, "clipG"], [g2, H2, "clip2"]]) gg.append("g").attr("clip-path", `url(#x${cp})`).selectAll("rect").data(EP).join("rect")
+    for (const [gg, hh, cp] of [[g, H1, "clip"], [gA, HG, "clipG"], [gB, HG, "clipG"], [g2, H2, "clip2"]]) gg.append("g").attr("clip-path", `url(#x-${cp})`).selectAll("rect").data(EP).join("rect")
       .attr("x", e => x(e.P)).attr("width", e => Math.max(1, x(e.B) - x(e.P))).attr("y", 0).attr("height", hh).attr("fill", "var(--shade)");
   
     const xa = d3.axisBottom(x).ticks(W > 1000 ? 12 : 8);
@@ -2286,7 +2338,7 @@ function start(D){
     g.append("g").attr("class", "ax").call(d3.axisLeft(yL).tickValues(lt).tickFormat(v => v >= 1 ? fmt0(v) : v));
     g.append("text").attr("class", "lbl").attr("x", -m.l + 4).attr("y", -2).attr("fill", "var(--muted)").text("Index (log)");
   
-    const P = g.append("g").attr("clip-path", "url(#xclip)");
+    const P = g.append("g").attr("clip-path", "url(#x-clip)");
     const idx = d3.range(i0, N);
     const lineOf = (arr, y) => d3.line().defined(i => arr[i] != null).x(i => x(T[i])).y(i => y(arr[i]));
     const iR = Math.max(i0, I90), idxR = d3.range(iR, N);
@@ -2294,7 +2346,7 @@ function start(D){
     if (document.getElementById("x-t-trend").checked) P.append("path").attr("d", lineOf(TR, yL)(idx)).attr("fill", "none").attr("stroke", "var(--trend)").attr("stroke-width", 1.5).attr("stroke-dasharray", "6 4");
     const gainPanel = (gp, y, arr, col, title) => {
       gp.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(5).tickSize(-iw).tickFormat(""));
-      const GP = gp.append("g").attr("clip-path", "url(#xclipG)");
+      const GP = gp.append("g").attr("clip-path", "url(#x-clipG)");
       GP.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--muted)").attr("stroke-width", 1);
       GP.append("path").attr("d", lineOf(arr, y)(idx)).attr("fill", "none").attr("stroke", `var(${col})`).attr("stroke-width", 1.2);
       const v = arr.slice(i0).filter(x => x != null), md = d3.median(v);
@@ -2335,7 +2387,7 @@ function start(D){
   
     // bottom panel: deviation from trend
     g2.append("g").attr("class", "gridl").call(d3.axisLeft(y2).ticks(4).tickSize(-iw).tickFormat(""));
-    const Q = g2.append("g").attr("clip-path", "url(#xclip2)");
+    const Q = g2.append("g").attr("clip-path", "url(#x-clip2)");
     const area = (pos) => d3.area().x(i => x(T[i])).y0(y2(0)).y1(i => y2(pos ? Math.max(0, dev[i]) : Math.min(0, dev[i])));
     Q.append("path").attr("d", area(true)(idx)).attr("fill", "var(--above)");
     Q.append("path").attr("d", area(false)(idx)).attr("fill", "var(--below)");
@@ -2404,11 +2456,11 @@ function start(D){
     s.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
     const idx = d3.range(N).filter(i => F[i] != null && keep(i));
     const r = corr(idx.map(i => DV[i]), idx.map(i => F[i]));
-    const x = d3.scaleLinear().domain([Math.log(0.3), Math.log(xmax)]).range([0, iw]);
+    const dvs = idx.map(i => DV[i]), x = d3.scaleLinear().domain([Math.min(Math.log(0.3), d3.min(dvs) - 0.05), Math.max(Math.log(xmax), d3.max(dvs) + 0.05)]).range([0, iw]);
     const ys = idx.map(i => F[i]);
     const y = d3.scaleLinear().domain([Math.min(-20, Math.floor(d3.min(ys) / 10) * 10), Math.max(30, Math.ceil(d3.max(ys) / 10) * 10)]).range([ih, 0]);
     const g = s.append("g").attr("transform", `translate(${m.l},${m.t})`);
-    const xt = [-30, -15, 0, 15, 30, 60, 100, 200, 400].filter(v => Math.log(1 + v / 100) <= Math.log(xmax) + 1e-9);
+    const xt = [-60, -30, -15, 0, 15, 30, 60, 100, 200, 400, 800].filter(v => { const u = Math.log(1 + v / 100); return u >= x.domain()[0] - 1e-9 && u <= x.domain()[1] + 1e-9 && (v !== -60 || x.domain()[0] < Math.log(0.45)) && (v !== 800 || x.domain()[1] > Math.log(6)); });
     g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(6).tickSize(-iw).tickFormat(""));
     g.append("g").attr("class", "gridl").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues(xt.map(v => Math.log(1 + v / 100))).tickSize(-ih).tickFormat(""));
     g.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--muted)");
@@ -2416,7 +2468,7 @@ function start(D){
     g.append("g").selectAll("circle").data(idx.filter((_, k) => k % 5 === 0)).join("circle")
       .attr("cx", i => x(DV[i])).attr("cy", i => y(F[i])).attr("r", 1.8).attr("fill", i => `var(${col(i)})`).attr("opacity", .65);
     // band medians
-    const edges = [-100, -30, -15, 0, 15, 30, 60, 100, 200, 400].map(v => Math.log(1 + v / 100 + 1e-9));
+    const edges = [-100, -30, -15, 0, 15, 30, 60, 100, 200, 400, 2000].map(v => Math.log(1 + v / 100 + 1e-9));
     const steps = [];
     for (let k = 0; k < edges.length - 1; k++) { const v = idx.filter(i => DV[i] >= edges[k] && DV[i] < edges[k + 1]).map(i => F[i]); if (v.length > 50) steps.push([Math.max(edges[k], x.domain()[0]), Math.min(edges[k + 1], x.domain()[1]), d3.median(v), v.length]); }
     for (const [a, b, md] of steps) {
@@ -2447,14 +2499,14 @@ function start(D){
     const yL = d3.scaleLog().domain([d3.min(vv) * 0.85, d3.max(vv) * 1.2]).range([H1, 0]);
     const dv = idx.map(i => (Math.exp(RDEV[i]) - 1) * 100);
     const y2 = d3.scaleLinear().domain([Math.min(-50, d3.min(dv)), Math.max(100, d3.max(dv))]).nice().range([H2, 0]);
-    s.append("defs").append("clipPath").attr("id", "xrclip").append("rect").attr("width", iw).attr("height", H1);
+    s.append("defs").append("clipPath").attr("id", "x-rclip").append("rect").attr("width", iw).attr("height", H1);
     const g = s.append("g").attr("transform", `translate(${m.l},${m.t})`), g2 = s.append("g").attr("transform", `translate(${m.l},${m.t + H1 + gap})`);
     const lt = [200, 300, 500, 1000, 2000, 3000, 5000, 10000].filter(v => v >= yL.domain()[0] && v <= yL.domain()[1]);
     g.append("g").attr("class", "gridl").call(d3.axisLeft(yL).tickValues(lt).tickSize(-iw).tickFormat(""));
     const xa = d3.axisBottom(x).ticks(W > 1000 ? 12 : 8);
     g.append("g").attr("class", "ax").attr("transform", `translate(0,${H1})`).call(xa);
     g.append("g").attr("class", "ax").call(d3.axisLeft(yL).tickValues(lt).tickFormat(fmt0));
-    const P = g.append("g").attr("clip-path", "url(#xrclip)");
+    const P = g.append("g").attr("clip-path", "url(#x-rclip)");
     const ln = (arr) => d3.line().x(i => x(T[i])).y(i => yL(arr[i]))(idx);
     P.append("path").attr("d", ln(TR)).attr("fill", "none").attr("stroke", "var(--muted)").attr("stroke-width", 1.2).attr("stroke-dasharray", "2 4");
     P.append("path").attr("d", ln(RT)).attr("fill", "none").attr("stroke", "var(--trend)").attr("stroke-width", 1.8).attr("stroke-dasharray", "7 4");
@@ -2480,21 +2532,342 @@ function start(D){
     scatter("x-rsc10", F10, `Next 10 years, start days 1990–${LY - 10}`, RDEV, k90, decade, 3.2, "Above / below the real-time (yellow) trend on the start day");
   }
   drawAll();
-  window.addEventListener("resize", () => { if (VIS()) { clearTimeout(window.__st); window.__st = setTimeout(drawAll, 150); } });
+  window.addEventListener("resize", () => { if (VIS()) { clearTimeout(st2); st2 = setTimeout(drawAll, 150); } });
   return () => { draw(); drawAll(); };
   
 }
 let redraw = null;
+const $ = id => document.getElementById(CFG.p + id);
 fetch("data/indices.json", { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(J => {
   if (!window.d3) throw new Error("d3");
   const D = build(J);
-  const LY = new Date((D.d0 + D.day[D.day.length - 1]) * 864e5).getUTCFullYear();
-  document.getElementById("x-load").hidden = true;
+  $("load").hidden = true;
   const m = D.meta, upd = new Date(D.generated).toLocaleString("en-US", { timeZone: "Asia/Singapore", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
-  document.getElementById("x-src").textContent = `Data: Yahoo Finance ${m.ticker || "^GSPC"} daily closes (data/indices.json), updated by the daily workflow on ${upd} SGT; latest close ${m.last || ""}${m.live ? " (live price, market still open at the update)" : ""}. Everything on this tab is recalculated from that file each time the page loads.`;
+  $("src").textContent = `Data: Yahoo Finance ${m.ticker || CFG.tick} daily closes (data/indices.json), updated by the daily workflow on ${upd} SGT; latest close ${m.last || ""}${m.live ? " (live price, market still open at the update)" : ""}. Everything on this tab is recalculated from that file each time the page loads.`;
   redraw = start(D);
-}).catch(e => { document.getElementById("x-load").textContent = e.message === "d3" ? "Couldn't load the chart library (d3)." : "Couldn't load the index data (data/indices.json)."; });
-document.querySelectorAll('.tabs button[data-view="spx"]').forEach(b => b.addEventListener("click", () => requestAnimationFrame(() => { if (redraw) redraw(); })));
+}).catch(e => { $("load").textContent = e.message === "d3" ? "Couldn't load the chart library (d3)." : "Couldn't load the index data (data/indices.json)."; });
+document.querySelectorAll(`.tabs button[data-view="${CFG.view}"]`).forEach(b => b.addEventListener("click", () => requestAnimationFrame(() => { if (redraw) redraw(); })));
+})();
+</script>
+<script>
+// Index history tab (peaks/bottoms, trends, buy-and-hold gains, correlations), recomputed from data/indices.json on every load
+(function(){
+"use strict";
+const CFG = {"view": "ndx", "key": "US100", "p": "n-", "tick": "^NDX"};
+const VIS = () => !document.getElementById(CFG.view).hidden;
+function build(J){
+  // closes of one index; drop days whose close equals the previous one (holidays carried forward)
+  const ds = J.dates, v = J.series[CFG.key], day = [], c = [];
+  const DAY = 864e5; let d0 = null, prev = null;
+  for (let i = 0; i < ds.length; i++) { const x = v[i]; if (x == null || x === prev) continue; prev = x; const dd = Date.parse(ds[i] + "T00:00:00Z") / DAY; if (d0 == null) d0 = dd; day.push(dd - d0); c.push(x); }
+  const N = c.length, t = day.map(d => d / 365.25), L = c.map(Math.log);
+  let st = 0, sy = 0, stt = 0, sty = 0; for (let i = 0; i < N; i++) { st += t[i]; sy += L[i]; stt += t[i] * t[i]; sty += t[i] * L[i]; }
+  const b = (N * sty - st * sy) / (N * stt - st * st), a = (sy - b * st) / N;
+  const end = day[N - 1], now = new Array(N).fill(null), g3 = new Array(N).fill(null);
+  let j = 0;
+  for (let i = 0; i < N; i++) {
+    const yrs = (end - day[i]) / 365.25;
+    if (yrs >= 1) now[i] = Math.round((Math.pow(c[N - 1] / c[i], 1 / yrs) - 1) * 10000) / 100;
+    const tgt = day[i] + Math.round(3 * 365.25);
+    if (day[i] + 1096 <= end) { if (j < i) j = i; while (j + 1 < N && day[j + 1] <= tgt) j++; const y = (day[j] - day[i]) / 365.25; g3[i] = Math.round((Math.pow(c[j] / c[i], 1 / y) - 1) * 10000) / 100; }
+  }
+  // a peak is an all-time-high close; its bottom is the lowest close before the peak is regained; keep falls of 9% or more
+  const iso = k => new Date((d0 + day[k]) * DAY).toISOString().slice(0, 10), ep = [];
+  let pk = 0, lo = 0;
+  const push = () => { const drop = (c[lo] / c[pk] - 1) * 100; if (drop <= -9) ep.push({ pd: iso(pk), p: c[pk], bd: iso(lo), b: c[lo], drop: Math.round(drop * 10) / 10 }); };
+  for (let i = 1; i < N; i++) { if (c[i] >= c[pk]) { if (lo !== pk) push(); pk = i; lo = i; } else if (c[i] < c[lo]) lo = i; }
+  if (lo !== pk) push();
+  return { d0, day, c, trend: { a, b }, now, g3, ep, meta: J.meta[CFG.key] || {}, generated: J.generated };
+}
+function start(D){
+  const Y0 = new Date(D.d0 * 864e5).getUTCFullYear(), LY = new Date((D.d0 + D.day[D.day.length - 1]) * 864e5).getUTCFullYear();
+  let st2;
+  const DAY = 864e5, N = D.day.length;
+  const T = D.day.map(x => new Date((D.d0 + x) * DAY));
+  const C = D.c, NOW = D.now, G3 = D.g3;
+  const t0 = T[0].getTime();
+  const TR = T.map(t => Math.exp(D.trend.a + D.trend.b * (t - t0) / DAY / 365.25));
+  // ---- real-time (no hindsight) trend: each day fits the log-linear trend on data up to that day only ----
+  const RT = new Array(N), RDEV = new Array(N);
+  { let n = 0, St = 0, Sy = 0, Stt = 0, Sty = 0;
+    for (let i = 0; i < N; i++) { const tt = (T[i] - t0) / DAY / 365.25, y = Math.log(C[i]); n++; St += tt; Sy += y; Stt += tt * tt; Sty += tt * y;
+      const den = n * Stt - St * St; const b = den ? (n * Sty - St * Sy) / den : 0, a = (Sy - b * St) / n; RT[i] = Math.exp(a + b * tt); RDEV[i] = Math.log(C[i] / RT[i]); } }
+  const I90 = d3.bisectLeft(T, new Date(Date.UTC(1995, 0, 1)));
+  const RM = []; { let m = 0; for (let i = 0; i < N; i++) { m = Math.max(m, C[i]); RM.push(m); } }
+  const EP = D.ep.map(e => ({ ...e, P: new Date(e.pd + "T00:00:00Z"), B: new Date(e.bd + "T00:00:00Z") }));
+  const fmtD = d3.utcFormat("%-d %b %Y"), fmtN = d3.format(",.2f"), fmt0 = d3.format(",.0f");
+  const pct = v => v == null ? "–" : (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  
+  // summary
+  (function () {
+    const last = N - 1, now = NOW.filter(v => v != null), g3 = G3.filter(v => v != null);
+    const med = a => d3.median(a), le = EP[EP.length - 1];
+    const dd = (C[last] / RM[last] - 1) * 100;
+    const cagr = (Math.pow(C[last] / C[0], 1 / ((T[last] - T[0]) / DAY / 365.25)) - 1) * 100;
+    document.getElementById("n-sub").textContent =
+      `${fmt0(N)} trading days, ${fmtD(T[0])} to ${fmtD(T[last])}. Log scale on the left: equal steps are equal % changes. ` +
+      `Price grew ${C[0].toFixed(2)} → ${fmt0(C[last])}, ${cagr.toFixed(1)}% a year; the trend fit is ${((Math.exp(D.trend.b) - 1) * 100).toFixed(1)}% a year.`;
+    const S = [
+      ["Last close", fmt0(C[last]), fmtD(T[last])],
+      ["Below all-time high", pct(dd), "ATH " + fmt0(RM[last])],
+      ["Latest 9% fall", pct(le.drop), `${fmtD(le.P)} → ${fmtD(le.B)}`],
+      ["Gain to now, median", pct(med(now)) + "/yr", `range ${pct(d3.min(now))} to ${pct(d3.max(now))}`],
+      ["3-year gain, median", pct(med(g3)) + "/yr", `${(g3.filter(v => v < 0).length / g3.length * 100).toFixed(0)}% of 3-year windows lost money`],
+    ];
+    document.getElementById("n-stats").innerHTML = S.map(s => `<div class="stat"><div class="k">${s[0]}</div><div class="v">${s[1]}</div><div class="n">${s[2]}</div></div>`).join("");
+  })();
+  
+  let from = 1985;
+  const svg = d3.select("#n-chart"), tip = document.getElementById("n-tip"), box = document.getElementById("n-box");
+  function bisect(t) { return Math.min(N - 1, Math.max(0, d3.bisector(d => d).center(T, t))); }
+  
+  function draw() {
+    svg.selectAll("*").remove();
+    const W = Math.max(760, box.clientWidth), m = { l: 58, r: 24, t: 14, b: 26 }, H1 = 440, gap = 34, HG = 170, H2 = 120, H = m.t + H1 + gap + 2 * (HG + gap) + H2 + m.b;
+    const o2 = m.t + H1 + gap, oA = o2 + H2 + gap, oB = oA + HG + gap, yEnd = oB + HG;
+    svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+    const iw = W - m.l - m.r;
+    const i0 = d3.bisectLeft(T, new Date(Date.UTC(from, 0, 1)));
+    const x = d3.scaleUtc().domain([T[i0], new Date(T[N - 1].getTime() + (T[N - 1] - T[i0]) * 0.03)]).range([0, iw]);
+    const vis = C.slice(i0), trv = TR.slice(i0);
+    const lo = Math.min(d3.min(vis), d3.min(trv)) * 0.72, hi = Math.max(d3.max(vis), d3.max(trv)) * 1.45;
+    const yL = d3.scaleLog().domain([lo, hi]).range([H1, 0]);
+    const dom = arr => { const v = arr.slice(i0).filter(x => x != null); return [Math.min(0, Math.floor(d3.min(v) / 5) * 5), Math.max(10, Math.ceil(d3.max(v) / 5) * 5)]; };
+    const yA = d3.scaleLinear().domain(dom(NOW)).range([HG, 0]), yB = d3.scaleLinear().domain(dom(G3)).range([HG, 0]);
+  
+    const dev = TR.map((t, i) => (C[i] / t - 1) * 100);
+    const dv = dev.slice(i0);
+    const y2 = d3.scaleLinear().domain([Math.min(-60, d3.min(dv)), Math.max(60, d3.max(dv))]).nice().range([H2, 0]);
+  
+    svg.append("defs").append("clipPath").attr("id", "n-clip").append("rect").attr("width", iw).attr("height", H1);
+    svg.select("defs").append("clipPath").attr("id", "n-clip2").append("rect").attr("width", iw).attr("height", H2);
+    svg.select("defs").append("clipPath").attr("id", "n-clipG").append("rect").attr("width", iw).attr("height", HG);
+    const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+    const gA = svg.append("g").attr("transform", `translate(${m.l},${oA})`), gB = svg.append("g").attr("transform", `translate(${m.l},${oB})`);
+    const g2 = svg.append("g").attr("transform", `translate(${m.l},${o2})`);
+  
+    // log ticks: 1,2,5 × 10^k
+    const lt = []; for (let k = -1; k < 6; k++) for (const s of [1, 2, 5]) { const v = s * 10 ** k; if (v >= lo && v <= hi) lt.push(v); }
+    g.append("g").attr("class", "gridl").call(d3.axisLeft(yL).tickValues(lt).tickSize(-iw).tickFormat(""));
+    // episode shading
+    for (const [gg, hh, cp] of [[g, H1, "clip"], [gA, HG, "clipG"], [gB, HG, "clipG"], [g2, H2, "clip2"]]) gg.append("g").attr("clip-path", `url(#n-${cp})`).selectAll("rect").data(EP).join("rect")
+      .attr("x", e => x(e.P)).attr("width", e => Math.max(1, x(e.B) - x(e.P))).attr("y", 0).attr("height", hh).attr("fill", "var(--shade)");
+  
+    const xa = d3.axisBottom(x).ticks(W > 1000 ? 12 : 8);
+    g.append("g").attr("class", "ax").attr("transform", `translate(0,${H1})`).call(xa);
+    g.append("g").attr("class", "ax").call(d3.axisLeft(yL).tickValues(lt).tickFormat(v => v >= 1 ? fmt0(v) : v));
+    g.append("text").attr("class", "lbl").attr("x", -m.l + 4).attr("y", -2).attr("fill", "var(--muted)").text("Index (log)");
+  
+    const P = g.append("g").attr("clip-path", "url(#n-clip)");
+    const idx = d3.range(i0, N);
+    const lineOf = (arr, y) => d3.line().defined(i => arr[i] != null).x(i => x(T[i])).y(i => y(arr[i]));
+    const iR = Math.max(i0, I90), idxR = d3.range(iR, N);
+    if (document.getElementById("n-t-rt").checked) P.append("path").attr("d", lineOf(RT, yL)(idxR)).attr("fill", "none").attr("stroke", "var(--rt)").attr("stroke-width", 2.4).attr("opacity", .95);
+    if (document.getElementById("n-t-trend").checked) P.append("path").attr("d", lineOf(TR, yL)(idx)).attr("fill", "none").attr("stroke", "var(--trend)").attr("stroke-width", 1.5).attr("stroke-dasharray", "6 4");
+    const gainPanel = (gp, y, arr, col, title) => {
+      gp.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(5).tickSize(-iw).tickFormat(""));
+      const GP = gp.append("g").attr("clip-path", "url(#n-clipG)");
+      GP.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--muted)").attr("stroke-width", 1);
+      GP.append("path").attr("d", lineOf(arr, y)(idx)).attr("fill", "none").attr("stroke", `var(${col})`).attr("stroke-width", 1.2);
+      const v = arr.slice(i0).filter(x => x != null), md = d3.median(v);
+      GP.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(md)).attr("y2", y(md)).attr("stroke", `var(${col})`).attr("stroke-dasharray", "5 4").attr("opacity", .7);
+      GP.append("text").attr("class", "lbl halo").attr("x", iw - 4).attr("y", y(md) - 4).attr("text-anchor", "end").attr("fill", `var(${col})`).attr("font-weight", 700).text(`median ${pct(md)}/yr`);
+      gp.append("g").attr("class", "ax").call(d3.axisLeft(y).ticks(5).tickFormat(v => (v > 0 ? "+" : "") + v + "%"));
+      gp.append("g").attr("class", "ax").attr("transform", `translate(0,${HG})`).call(xa);
+      gp.append("text").attr("class", "lbl").attr("x", 4).attr("y", -6).attr("fill", "var(--fg)").attr("font-weight", 600).text(title);
+    };
+    gainPanel(gA, yA, NOW, "--now", "Buy & hold annual gain, from that day to now (start days at least 1 year ago)");
+    gainPanel(gB, yB, G3, "--g3", "Buy & hold annual gain over the next 3 years (start days at least 3 years ago)");
+    P.append("path").attr("d", lineOf(C, yL)(idx)).attr("fill", "none").attr("stroke", "var(--price)").attr("stroke-width", 1.3);
+  
+    const ev = EP.filter(e => e.B >= T[i0]);
+    P.selectAll(".pk").data(ev).join("path").attr("d", d3.symbol(d3.symbolTriangle, 42)).attr("fill", "var(--peak)")
+      .attr("transform", e => `translate(${x(e.P)},${yL(e.p) - 7}) rotate(180)`);
+    P.selectAll(".bt").data(ev).join("path").attr("d", d3.symbol(d3.symbolTriangle, 42)).attr("fill", "var(--bottom)")
+      .attr("transform", e => `translate(${x(e.B)},${yL(e.b) + 7})`);
+    // labels: try spots below, then above the bottom marker; skip spots that overlap a placed label or leave the plot
+    const lab = ev.filter(e => e.drop <= -15 || e === EP[EP.length - 1]);
+    const placed = [], W2 = 25, HH = 23;
+    const hit = (cx, ty) => ty < 2 || ty + HH > H1 - 2 || cx - W2 < 0 || cx + W2 > iw || placed.some(b => Math.abs(b.x - cx) < 2 * W2 + 2 && Math.abs(b.y - ty) < HH + 2);
+    for (const e of lab) {
+      const bx = x(e.B), my = yL(e.b);
+      let best = null;
+      for (const off of [14, 40, 66, 92, -40, -66, -92]) { const ty = off > 0 ? my + off : my + off - 0; if (!hit(bx, ty)) { best = ty; break; } }
+      if (best == null) continue;
+      placed.push({ x: bx, y: best });
+      const y1 = best > my ? my + 11 : my - 2, y2 = best > my ? best : best + HH;
+      if (Math.abs(y2 - y1) > 4) P.append("line").attr("x1", bx).attr("x2", bx).attr("y1", y1).attr("y2", y2).attr("stroke", "var(--bottom)").attr("opacity", .45);
+      const t = P.append("text").attr("class", "lbl halo").attr("x", bx).attr("y", best + 9).attr("text-anchor", "middle").attr("fill", "var(--bottom)");
+      t.append("tspan").attr("x", bx).attr("font-weight", 700).text(e.drop.toFixed(0) + "%");
+      t.append("tspan").attr("x", bx).attr("dy", 11).text(d3.utcFormat("%b %Y")(e.B));
+    }
+    const last = N - 1;
+    P.append("circle").attr("cx", x(T[last])).attr("cy", yL(C[last])).attr("r", 3.5).attr("fill", "var(--price)");
+    P.append("text").attr("class", "lbl").attr("x", x(T[last]) - 6).attr("y", yL(C[last]) - 10).attr("text-anchor", "end").attr("font-weight", 700).attr("class", "lbl halo").attr("fill", "var(--fg)").text(`${d3.utcFormat("%-d %b %Y")(T[last])}: ${fmt0(C[last])}`);
+  
+    // bottom panel: deviation from trend
+    g2.append("g").attr("class", "gridl").call(d3.axisLeft(y2).ticks(4).tickSize(-iw).tickFormat(""));
+    const Q = g2.append("g").attr("clip-path", "url(#n-clip2)");
+    const area = (pos) => d3.area().x(i => x(T[i])).y0(y2(0)).y1(i => y2(pos ? Math.max(0, dev[i]) : Math.min(0, dev[i])));
+    Q.append("path").attr("d", area(true)(idx)).attr("fill", "var(--above)");
+    Q.append("path").attr("d", area(false)(idx)).attr("fill", "var(--below)");
+    Q.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y2(0)).attr("y2", y2(0)).attr("stroke", "var(--muted)");
+    if (document.getElementById("n-t-rt").checked) {
+      Q.append("path").attr("d", d3.line().x(i => x(T[i])).y(i => y2((Math.exp(RDEV[i]) - 1) * 100))(idxR)).attr("fill", "none").attr("stroke", "var(--rt)").attr("stroke-width", 1.8);
+      g2.append("text").attr("class", "lbl halo").attr("x", iw - 4).attr("y", 12).attr("text-anchor", "end").attr("fill", "var(--rt)").attr("font-weight", 700).text(`yellow: vs real-time trend, today ${pct((Math.exp(RDEV[N - 1]) - 1) * 100)}`);
+    }
+    g2.append("g").attr("class", "ax").call(d3.axisLeft(y2).ticks(4).tickFormat(v => (v > 0 ? "+" : "") + v + "%"));
+    g2.append("g").attr("class", "ax").attr("transform", `translate(0,${H2})`).call(xa);
+    g2.append("text").attr("class", "lbl").attr("x", 4).attr("y", -6).attr("fill", "var(--muted)").text("Above / below the long-run trend");
+  
+    // hover
+    const vl = svg.append("g").attr("pointer-events", "none").attr("opacity", 0);
+    vl.append("line").attr("class", "v1").attr("stroke", "var(--muted)").attr("stroke-dasharray", "2 3");
+    const dots = ["price", "now", "g3"].map(c => vl.append("circle").attr("r", 3.5).attr("fill", `var(--${c})`).attr("stroke", "var(--panel)").attr("stroke-width", 1.5));
+    svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", iw).attr("height", yEnd - m.t).attr("fill", "transparent")
+      .on("pointermove", ev => {
+        const [px] = d3.pointer(ev); const t = x.invert(px - m.l); const i = bisect(t); const X = m.l + x(T[i]);
+        vl.attr("opacity", 1); vl.select(".v1").attr("x1", X).attr("x2", X).attr("y1", m.t).attr("y2", yEnd);
+        const vals = [[C[i], yL, m.t], [NOW[i], yA, oA], [G3[i], yB, oB]];
+        dots.forEach((d, k) => { const [v, y, o] = vals[k]; d.attr("opacity", v == null ? 0 : 1).attr("cx", X).attr("cy", v == null ? 0 : o + y(v)); });
+        const ep = EP.find(e => T[i] >= e.P && T[i] <= e.B);
+        tip.innerHTML = `<div><b>${fmtD(T[i])}</b></div>
+          <div class="r"><span>Close</span><span>${fmtN(C[i])}</span></div>
+          <div class="r"><span>Below all-time high</span><span>${pct((C[i] / RM[i] - 1) * 100)}</span></div>
+          <div class="r"><span>Vs hindsight trend</span><span>${pct(dev[i])}</span></div>
+          ${i >= I90 ? `<div class="r" style="color:var(--rt)"><span>Vs real-time trend</span><span>${pct((Math.exp(RDEV[i]) - 1) * 100)}</span></div>` : ""}
+          <div class="r" style="color:var(--now)"><span>Gain to now</span><span>${NOW[i] == null ? "under 1 yr" : pct(NOW[i]) + "/yr"}</span></div>
+          <div class="r" style="color:var(--g3)"><span>Gain next 3 yrs</span><span>${G3[i] == null ? "under 3 yrs" : pct(G3[i]) + "/yr"}</span></div>
+          ${ep ? `<div style="color:var(--bottom);margin-top:4px">In a ${ep.drop.toFixed(1)}% fall (${fmtD(ep.P)} → ${fmtD(ep.B)})</div>` : ""}`;
+        tip.hidden = false;
+        const bw = box.clientWidth, sl = box.scrollLeft, tw = tip.offsetWidth;
+        let L = X - sl + 14; if (L + tw > bw - 4) L = X - sl - tw - 14;
+        tip.style.left = Math.max(4, L) + "px"; tip.style.top = "18px";
+      })
+      .on("pointerleave", () => { vl.attr("opacity", 0); tip.hidden = true; });
+  }
+  document.querySelectorAll("#n-range button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("#n-range button").forEach(o => o.setAttribute("aria-pressed", o === b)); from = +b.dataset.from; draw();
+  }));
+  ["n-t-trend", "n-t-rt"].forEach(id => document.getElementById(id).addEventListener("change", draw));
+  let rt; window.addEventListener("resize", () => { if (VIS()) { clearTimeout(rt); rt = setTimeout(draw, 150); } });
+  draw();
+  
+  // ---- correlation scatter ----
+  const DEVL = C.map((c, i) => Math.log(c / TR[i]));
+  function fwd(Y) {
+    const out = new Array(N).fill(null), endT = T[N - 1].getTime(), span = Y * 365.25 * DAY; let j = 0;
+    for (let i = 0; i < N; i++) {
+      const tgt = T[i].getTime() + span; if (tgt > endT) break;
+      if (j < i) j = i; while (j + 1 < N && T[j + 1].getTime() <= tgt) j++;
+      out[i] = (Math.pow(C[j] / C[i], 1 / ((T[j] - T[i]) / DAY / 365.25)) - 1) * 100;
+    }
+    return out;
+  }
+  const F3 = G3, F10 = fwd(10);
+  const era = i => T[i].getUTCFullYear() < 2000 ? "--e1" : T[i].getUTCFullYear() < 2010 ? "--e2" : "--e3";
+  const legendHTML = L3 => L3.map(([c, l]) => `<span><i style="background:var(${c})"></i>${l}</span>`).join("") + `<span><i style="background:var(--mid);border-radius:1px;height:3px;width:14px"></i>median in each band</span>`;
+  document.getElementById("n-legend").innerHTML = legendHTML([["--e1", `${Y0}–1999`], ["--e2", "2000–2009"], ["--e3", `2010–${LY}`]]);
+  document.getElementById("n-legend2").innerHTML = legendHTML([["--e1", "1995–1999"], ["--e2", "2000–2009"], ["--e3", `2010–${LY}`]]);
+  function corr(xs, ys) { const n = xs.length, mx = d3.mean(xs), my = d3.mean(ys); let a = 0, b = 0, c = 0; for (let k = 0; k < n; k++) { const dx = xs[k] - mx, dy = ys[k] - my; a += dx * dy; b += dx * dx; c += dy * dy; } return a / Math.sqrt(b * c); }
+  function scatter(id, F, title, DV = DEVL, keep = () => true, col = era, xmax = 5.2, xlab = "Above / below the long-run (hindsight) trend on the start day") {
+    const el = document.getElementById(id); const s = d3.select(el); s.selectAll("*").remove();
+    const W = Math.max(420, el.parentNode.clientWidth), H = 350, m = { l: 50, r: 14, t: 26, b: 60 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+    s.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+    const idx = d3.range(N).filter(i => F[i] != null && keep(i));
+    const r = corr(idx.map(i => DV[i]), idx.map(i => F[i]));
+    const dvs = idx.map(i => DV[i]), x = d3.scaleLinear().domain([Math.min(Math.log(0.3), d3.min(dvs) - 0.05), Math.max(Math.log(xmax), d3.max(dvs) + 0.05)]).range([0, iw]);
+    const ys = idx.map(i => F[i]);
+    const y = d3.scaleLinear().domain([Math.min(-20, Math.floor(d3.min(ys) / 10) * 10), Math.max(30, Math.ceil(d3.max(ys) / 10) * 10)]).range([ih, 0]);
+    const g = s.append("g").attr("transform", `translate(${m.l},${m.t})`);
+    const xt = [-60, -30, -15, 0, 15, 30, 60, 100, 200, 400, 800].filter(v => { const u = Math.log(1 + v / 100); return u >= x.domain()[0] - 1e-9 && u <= x.domain()[1] + 1e-9 && (v !== -60 || x.domain()[0] < Math.log(0.45)) && (v !== 800 || x.domain()[1] > Math.log(6)); });
+    g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(6).tickSize(-iw).tickFormat(""));
+    g.append("g").attr("class", "gridl").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues(xt.map(v => Math.log(1 + v / 100))).tickSize(-ih).tickFormat(""));
+    g.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--muted)");
+    g.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", 0).attr("y2", ih).attr("stroke", "var(--muted)");
+    g.append("g").selectAll("circle").data(idx.filter((_, k) => k % 5 === 0)).join("circle")
+      .attr("cx", i => x(DV[i])).attr("cy", i => y(F[i])).attr("r", 1.8).attr("fill", i => `var(${col(i)})`).attr("opacity", .65);
+    // band medians
+    const edges = [-100, -30, -15, 0, 15, 30, 60, 100, 200, 400, 2000].map(v => Math.log(1 + v / 100 + 1e-9));
+    const steps = [];
+    for (let k = 0; k < edges.length - 1; k++) { const v = idx.filter(i => DV[i] >= edges[k] && DV[i] < edges[k + 1]).map(i => F[i]); if (v.length > 50) steps.push([Math.max(edges[k], x.domain()[0]), Math.min(edges[k + 1], x.domain()[1]), d3.median(v), v.length]); }
+    for (const [a, b, md] of steps) {
+      g.append("line").attr("x1", x(a)).attr("x2", x(b)).attr("y1", y(md)).attr("y2", y(md)).attr("stroke", "var(--panel)").attr("stroke-width", 5);
+      g.append("line").attr("x1", x(a)).attr("x2", x(b)).attr("y1", y(md)).attr("y2", y(md)).attr("stroke", "var(--mid)").attr("stroke-width", 2.5);
+      g.append("text").attr("class", "lbl halo").attr("x", (x(a) + x(b)) / 2).attr("y", y(md) - 6).attr("text-anchor", "middle").attr("fill", "var(--mid)").attr("font-weight", 700).text((md >= 0 ? "+" : "") + md.toFixed(0) + "%");
+    }
+    const td = DV[N - 1];
+    g.append("line").attr("x1", x(td)).attr("x2", x(td)).attr("y1", 0).attr("y2", ih).attr("stroke", "var(--bottom)").attr("stroke-dasharray", "5 4").attr("stroke-width", 1.5);
+    g.append("text").attr("class", "lbl halo").attr("x", x(td) - 5).attr("y", 12).attr("text-anchor", "end").attr("fill", "var(--bottom)").attr("font-weight", 700).text(`today ${pct((Math.exp(td) - 1) * 100)}`);
+    g.append("g").attr("class", "ax").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues(xt.map(v => Math.log(1 + v / 100))).tickFormat((v, k) => (xt[k] > 0 ? "+" : "") + xt[k] + "%"))
+      .selectAll("text").attr("text-anchor", "end").attr("dx", "-0.4em").attr("dy", "0.5em").attr("transform", "rotate(-40)");
+    g.append("g").attr("class", "ax").call(d3.axisLeft(y).ticks(6).tickFormat(v => (v > 0 ? "+" : "") + v + "%"));
+    g.append("text").attr("class", "lbl").attr("x", iw / 2).attr("y", ih + 54).attr("text-anchor", "middle").attr("fill", "var(--muted)").text(xlab);
+    s.append("text").attr("x", m.l).attr("y", 16).attr("font-size", 13).attr("font-weight", 700).attr("fill", "var(--fg)").text(title);
+    s.append("text").attr("x", W - m.r).attr("y", 16).attr("text-anchor", "end").attr("font-size", 12).attr("font-family", "var(--mono)").attr("fill", "var(--fg)").text(`correlation ${r.toFixed(2)}`);
+  }
+  function drawScatter() { scatter("n-sc3", F3, "Annual gain over the next 3 years"); scatter("n-sc10", F10, "Annual gain over the next 10 years"); }
+  
+  const decade = i => T[i].getUTCFullYear() < 2000 ? "--e1" : T[i].getUTCFullYear() < 2010 ? "--e2" : "--e3";
+  function drawRT() {
+    const el = document.getElementById("rt"), s = d3.select(el); s.selectAll("*").remove();
+    const W = Math.max(760, el.parentNode.clientWidth), m = { l: 58, r: 24, t: 14, b: 26 }, H1 = 340, gap = 34, H2 = 140, H = m.t + H1 + gap + H2 + m.b, iw = W - m.l - m.r;
+    s.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+    const idx = d3.range(I90, N);
+    const x = d3.scaleUtc().domain([T[I90], new Date(T[N - 1].getTime() + (T[N - 1] - T[I90]) * 0.03)]).range([0, iw]);
+    const vv = [...idx.map(i => C[i]), ...idx.map(i => RT[i]), ...idx.map(i => TR[i])];
+    const yL = d3.scaleLog().domain([d3.min(vv) * 0.85, d3.max(vv) * 1.2]).range([H1, 0]);
+    const dv = idx.map(i => (Math.exp(RDEV[i]) - 1) * 100);
+    const y2 = d3.scaleLinear().domain([Math.min(-50, d3.min(dv)), Math.max(100, d3.max(dv))]).nice().range([H2, 0]);
+    s.append("defs").append("clipPath").attr("id", "n-rclip").append("rect").attr("width", iw).attr("height", H1);
+    const g = s.append("g").attr("transform", `translate(${m.l},${m.t})`), g2 = s.append("g").attr("transform", `translate(${m.l},${m.t + H1 + gap})`);
+    const lt = [200, 300, 500, 1000, 2000, 3000, 5000, 10000].filter(v => v >= yL.domain()[0] && v <= yL.domain()[1]);
+    g.append("g").attr("class", "gridl").call(d3.axisLeft(yL).tickValues(lt).tickSize(-iw).tickFormat(""));
+    const xa = d3.axisBottom(x).ticks(W > 1000 ? 12 : 8);
+    g.append("g").attr("class", "ax").attr("transform", `translate(0,${H1})`).call(xa);
+    g.append("g").attr("class", "ax").call(d3.axisLeft(yL).tickValues(lt).tickFormat(fmt0));
+    const P = g.append("g").attr("clip-path", "url(#n-rclip)");
+    const ln = (arr) => d3.line().x(i => x(T[i])).y(i => yL(arr[i]))(idx);
+    P.append("path").attr("d", ln(TR)).attr("fill", "none").attr("stroke", "var(--muted)").attr("stroke-width", 1.2).attr("stroke-dasharray", "2 4");
+    P.append("path").attr("d", ln(RT)).attr("fill", "none").attr("stroke", "var(--trend)").attr("stroke-width", 1.8).attr("stroke-dasharray", "7 4");
+    P.append("path").attr("d", ln(C)).attr("fill", "none").attr("stroke", "var(--price)").attr("stroke-width", 1.3);
+    const L = N - 1;
+    P.append("text").attr("class", "lbl halo").attr("x", x(T[L]) - 4).attr("y", yL(RT[L]) + 14).attr("text-anchor", "end").attr("fill", "var(--trend)").attr("font-weight", 700).text(`real-time trend ${fmt0(RT[L])}`);
+    P.append("text").attr("class", "lbl halo").attr("x", x(T[I90 + 400])).attr("y", yL(TR[I90 + 400]) + 16).attr("fill", "var(--muted)").text(`hindsight trend (fitted on ${Y0}–${LY})`);
+    g.append("text").attr("class", "lbl").attr("x", 4).attr("y", 12).attr("fill", "var(--fg)").attr("font-weight", 600).text("Index (log) with the trend as it was known on each day");
+    g2.append("g").attr("class", "gridl").call(d3.axisLeft(y2).ticks(5).tickSize(-iw).tickFormat(""));
+    const area = pos => d3.area().x((i, k) => x(T[i])).y0(y2(0)).y1((i, k) => y2(pos ? Math.max(0, dv[k]) : Math.min(0, dv[k])));
+    g2.append("path").attr("d", area(true)(idx)).attr("fill", "var(--above)");
+    g2.append("path").attr("d", area(false)(idx)).attr("fill", "var(--below)");
+    g2.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y2(0)).attr("y2", y2(0)).attr("stroke", "var(--muted)");
+    g2.append("g").attr("class", "ax").call(d3.axisLeft(y2).ticks(5).tickFormat(v => (v > 0 ? "+" : "") + v + "%"));
+    g2.append("g").attr("class", "ax").attr("transform", `translate(0,${H2})`).call(xa);
+    g2.append("text").attr("class", "lbl").attr("x", 4).attr("y", -6).attr("fill", "var(--fg)").attr("font-weight", 600).text("Above / below the real-time trend");
+    g2.append("text").attr("class", "lbl halo").attr("x", x(T[L]) - 4).attr("y", y2(dv[dv.length - 1]) - 6).attr("text-anchor", "end").attr("fill", "var(--fg)").attr("font-weight", 700).text(`today ${pct(dv[dv.length - 1])}`);
+  }
+  function drawAll() {
+    drawScatter();
+    const k90 = i => i >= I90;
+    scatter("n-rsc3", F3, `Next 3 years, start days 1995–${LY - 3}`, RDEV, k90, decade, 3.2, "Above / below the real-time (yellow) trend on the start day");
+    scatter("n-rsc10", F10, `Next 10 years, start days 1995–${LY - 10}`, RDEV, k90, decade, 3.2, "Above / below the real-time (yellow) trend on the start day");
+  }
+  drawAll();
+  window.addEventListener("resize", () => { if (VIS()) { clearTimeout(st2); st2 = setTimeout(drawAll, 150); } });
+  return () => { draw(); drawAll(); };
+  
+}
+let redraw = null;
+const $ = id => document.getElementById(CFG.p + id);
+fetch("data/indices.json", { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(J => {
+  if (!window.d3) throw new Error("d3");
+  const D = build(J);
+  $("load").hidden = true;
+  const m = D.meta, upd = new Date(D.generated).toLocaleString("en-US", { timeZone: "Asia/Singapore", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  $("src").textContent = `Data: Yahoo Finance ${m.ticker || CFG.tick} daily closes (data/indices.json), updated by the daily workflow on ${upd} SGT; latest close ${m.last || ""}${m.live ? " (live price, market still open at the update)" : ""}. Everything on this tab is recalculated from that file each time the page loads.`;
+  redraw = start(D);
+}).catch(e => { $("load").textContent = e.message === "d3" ? "Couldn't load the chart library (d3)." : "Couldn't load the index data (data/indices.json)."; });
+document.querySelectorAll(`.tabs button[data-view="${CFG.view}"]`).forEach(b => b.addEventListener("click", () => requestAnimationFrame(() => { if (redraw) redraw(); })));
 })();
 </script>
 </body>

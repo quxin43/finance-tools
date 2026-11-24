@@ -21,11 +21,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update-and-deploy:
+  # Job 1: download the data, save it to the repository and package the site.
+  update:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -51,14 +49,40 @@ jobs:
             echo "No data changes"
           else
             git commit -m "Update index data $(date -u +%F)"
-            git push
+            # Another run (or a re-run of an older one) may have pushed first: put this commit on top of
+            # the latest main, keeping this run's freshly downloaded data if the same file changed, then push.
+            ok=0
+            for i in 1 2 3; do
+              if git pull --rebase -X theirs origin main && git push; then ok=1; break; fi
+              git rebase --abort 2>/dev/null || true
+              echo "Push failed, retrying ($i of 3)…"; sleep 15
+            done
+            [ "$ok" = 1 ] || { echo "Could not save the data after 3 tries"; exit 1; }
           fi
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: .
 
+  # Job 2: publish the packaged site. It runs as its own job because deploy-pages can miss an artifact uploaded
+  # a moment earlier in the same job ("No artifacts named github-pages were found", actions/deploy-pages#451).
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
+    steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before retrying the deploy
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 60
+
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v5
